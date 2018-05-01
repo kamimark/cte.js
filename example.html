@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <script src="cte.debug.js"></script>
+  <style>
+    .hidden {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <li cte-id="nickname_item"><b><span data="this"></span></b></li>
+
+  <div cte-id="basic">
+    <h1 data="title"></h1>
+    <h2 data="subtitle"></h2>
+    <label>Name:</label><span data="person.name"></span>
+    <br/>
+    <label>Age:</label><span data="person.age"></span>
+    <br/>
+    <input type="text" data="content" placeholder="content"></input>
+    <br/>
+    <input type="number" data="person.money" placeholder="money"></input>
+    <br/>
+    <input type="range" data="person.age" attrs="age_range" placeholder="age"></input>
+    <br/>
+    <label>Has license:</label><input type="checkbox" data="person.has_license"></input>
+    <br/>
+    <ul cte-ref="nickname_item" data="person.nicknames"></ul>
+    <ul data="person.friends">
+      <li><span data="name"></span>&nbsp;<span data="age"></span></li>
+    </ul>
+    <button class="hidden">Set</button>
+  </div>
+
+  <button id="add">Add template</button>
+  <button id="populate" class="hidden">Populate template</button>
+  <button id="getObj" class="hidden">Data</button>
+  <button id="show" class="hidden">Show template</button>
+  <button id="hide" class="hidden">Hide template</button>
+
+  <div class="container"></div>
+  <script>
+    document
+      .querySelector('#add')
+      .addEventListener('click', (e) => {
+        cte.newDom('basic', '.container', {
+          title: 'title',
+          subtitle: 'subtitle',
+          content: 'Content',
+          age_range: {min: 2, max: 10, step: 1},
+          person: { 
+            name: 'Name',
+            age: 5,
+            has_license: true,
+            nicknames: ['Power Ranger', 'Captain Planet'],
+            friends: [{name: 'John Doe', age:'Unknown'}, {name: 'Jean Doe', age:'25'}]
+          }
+        });
+    });
+  </script>
+</body>
+</html>
