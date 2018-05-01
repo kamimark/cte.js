@@ -14,6 +14,12 @@
   <div cte-id="basic">
     <h1 data="title"></h1>
     <h2 data="subtitle"></h2>
+    <label>Name:</label>
+    <select data="person.title">
+      <option value="mr">Mr</option>
+      <option value="mrs">Mrs</option>
+      <option value="miss">Miss</option>
+    </select>
     <label>Name:</label><span data="person.name"></span>
     <br/>
     <label>Age:</label><span data="person.age"></span>
@@ -25,6 +31,8 @@
     <input type="range" data="person.age" attrs="age_range" placeholder="age"></input>
     <br/>
     <label>Has license:</label><input type="checkbox" data="person.has_license"></input>
+    <br/>
+    <select data="person.dynamic_options"></select>
     <br/>
     <ul cte-ref="nickname_item" data="person.nicknames"></ul>
     <ul data="person.friends">
@@ -49,12 +57,14 @@
           subtitle: 'subtitle',
           content: 'Content',
           age_range: {min: 2, max: 10, step: 1},
-          person: { 
-            name: 'Name',
+          person: {
+            title: 'mr',
+            name: 'Markos',
             age: 5,
             has_license: true,
             nicknames: ['Power Ranger', 'Captain Planet'],
-            friends: [{name: 'John Doe', age:'Unknown'}, {name: 'Jean Doe', age:'25'}]
+            friends: [{name: 'John Doe', age:'Unknown'}, {name: 'Jean Doe', age:'25'}],
+            dynamic_options: [{value: 'option1', text: 'Option 1'}, {value: 'option2', text: 'Option 2'}, {value: 'option3', text: 'Option 3'}]
           }
         });
     });

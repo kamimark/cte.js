@@ -60,6 +60,9 @@
         specialInputPopulators[type](el, value);
       else
         el.value = value;
+    },
+    SELECT(el, value) {
+      el.value = value;
     }
   }
   
@@ -93,11 +96,29 @@
       }
     }
 
-    for (const i in objects) {
-      for (const child of container.anonymousTemplateChildren) {
-        const freshChild = child.cloneNode(true);
-        put(freshChild, objects[i]);
-        container.appendChild(freshChild);
+    if (container.tagName == "SELECT") {
+      for (const i = 0; i < container.length; ++i)
+        container.remove(i);
+
+      for (const option of objects) {
+        const element = option.element ? option.element : 'option';
+        const o = document.createElement(element);
+        for (const key of Object.keys(option))
+          if (key != 'element')
+            if (key == 'text')
+              o.text = option[key];
+            else
+              o.setAttribute(key, option[key]);
+
+        container.add(o);
+      }
+    } else {
+      for (const i in objects) {
+        for (const child of container.anonymousTemplateChildren) {
+          const freshChild = child.cloneNode(true);
+          put(freshChild, objects[i]);
+          container.appendChild(freshChild);
+        }
       }
     }
   }
