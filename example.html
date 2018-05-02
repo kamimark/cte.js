@@ -9,53 +9,62 @@
   </style>
 </head>
 <body>
-  <li cte-id="nickname_item"><b><span data="this"></span></b></li>
-
-  <div cte-id="basic">
-    <h1 data="title"></h1>
-    <h2 data="subtitle"></h2>
-    <label>Name:</label>
-    <select data="person.title">
+  <li cte="friend-item">
+    <span data="name"></span>&nbsp;<span data="age"></span>
+  </li>
+  <div cte="person-template">
+      <select data="title">
       <option value="mr">Mr</option>
       <option value="mrs">Mrs</option>
       <option value="miss">Miss</option>
     </select>
-    <label>Name:</label><span data="person.name"></span>
+    <span data="name"></span>
     <br/>
-    <label>Age:</label><span data="person.age"></span>
+    <label>Age:</label><span data="age" data-type="number"></span>
     <br/>
-    <input type="text" data="content" placeholder="content"></input>
+      <br/>
+    <input type="number" data="money" placeholder="money"></input>
     <br/>
-    <input type="number" data="person.money" placeholder="money"></input>
+    <input type="range" data="age" attrs="age_range" placeholder="age"></input>
     <br/>
-    <input type="range" data="person.age" attrs="age_range" placeholder="age"></input>
+    <label>Has license:</label><input type="checkbox" data="has_license"></input>
     <br/>
-    <label>Has license:</label><input type="checkbox" data="person.has_license"></input>
-    <br/>
-    <select data="person.dynamic_options"></select>
-    <br/>
-    <ul cte-ref="nickname_item" data="person.nicknames"></ul>
-    <ul data="person.friends">
-      <li><span data="name"></span>&nbsp;<span data="age"></span></li>
+    <!--ul data="nicknames">
+      <li>
+        <ul data="this">
+          <li><b><span data="this"></span></b></li>
+        </ul>
+      </li>
+    </ul-->
+    <ul data="friends" cte-ref="friend-item">
+
     </ul>
-    <button class="hidden">Set</button>
+  </div>
+
+  <div cte="basic">
+    <h1 data="title"></h1>
+    <h2 data="subtitle"></h2>
+    <input type="text" data="content.field1" placeholder="field1"></input>
+    <input type="text" data="content.field2" placeholder="field2"></input>
+    <div cte-ref="person-template" data="person"></div>
+    <button id="getObj">Get</button>
+    <button id="setObj">Set</button>
   </div>
 
   <button id="add">Add template</button>
-  <button id="populate" class="hidden">Populate template</button>
-  <button id="getObj" class="hidden">Data</button>
   <button id="show" class="hidden">Show template</button>
   <button id="hide" class="hidden">Hide template</button>
 
   <div class="container"></div>
   <script>
-    document
-      .querySelector('#add')
-      .addEventListener('click', (e) => {
-        cte.newDom('basic', '.container', {
+  /* bad practice
+    let dynamic_options = [{value: 'option1', text: 'Option 1'}, {value: 'option2', text: 'Option 2'}, {value: 'option3', text: 'Option 3'}];
+    cte.setDynamicOptions("dynamic_options", dynamic_options);
+  */
+    let object = {
           title: 'title',
           subtitle: 'subtitle',
-          content: 'Content',
+          content: {'field1': 'Content1', 'field2': 'Content2'},
           age_range: {min: 2, max: 10, step: 1},
           person: {
             title: 'mr',
@@ -64,10 +73,28 @@
             has_license: true,
             nicknames: ['Power Ranger', 'Captain Planet'],
             friends: [{name: 'John Doe', age:'Unknown'}, {name: 'Jean Doe', age:'25'}],
-            dynamic_options: [{value: 'option1', text: 'Option 1'}, {value: 'option2', text: 'Option 2'}, {value: 'option3', text: 'Option 3'}]
           }
+        };
+
+    document
+      .querySelector('#add')
+      .addEventListener('click', (e) => {
+        const template = cte.newDom('basic', '.container', object);
+        template
+          .querySelector('#getObj')
+          .addEventListener('click', (e) => {
+            const object = cte.getObject(template);
+            console.log(object);
+            alert(JSON.stringify(object));
+        });
+
+        template
+          .querySelector('#setObj')
+          .addEventListener('click', (e) => {
+            object = cte.getObject(template);
         });
     });
+
   </script>
 </body>
 </html>
