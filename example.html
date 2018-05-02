@@ -51,30 +51,44 @@
     <button id="setObj">Set</button>
   </div>
 
-  <button id="add">Add template</button>
+  <button id="add">Add Single template</button>
+  <button id="addMulti">Add Multiple templates</button>
   <button id="show" class="hidden">Show template</button>
   <button id="hide" class="hidden">Hide template</button>
 
   <div class="container"></div>
   <script>
-  /* bad practice
-    let dynamic_options = [{value: 'option1', text: 'Option 1'}, {value: 'option2', text: 'Option 2'}, {value: 'option3', text: 'Option 3'}];
-    cte.setDynamicOptions("dynamic_options", dynamic_options);
-  */
     let object = {
-          title: 'title',
-          subtitle: 'subtitle',
-          content: {'field1': 'Content1', 'field2': 'Content2'},
-          age_range: {min: 2, max: 10, step: 1},
-          person: {
-            title: 'mr',
-            name: 'Markos',
-            age: 5,
-            has_license: true,
-            nicknames: ['Power Ranger', 'Captain Planet'],
-            friends: [{name: 'John Doe', age:'Unknown'}, {name: 'Jean Doe', age:'25'}],
-          }
-        };
+      title: 'title',
+      subtitle: 'subtitle',
+      content: {'field1': 'Content1', 'field2': 'Content2'},
+      age_range: {min: 2, max: 10, step: 1},
+      person: {
+        title: 'mr',
+        name: 'Markos',
+        age: 5,
+        has_license: true,
+        nicknames: ['Power Ranger', 'Captain Planet'],
+        friends: [{name: 'John Doe', age:'Unknown'}, {name: 'Jean Doe', age:'25'}],
+      }
+    };
+
+    let object2 = {
+      title: 'title2',
+      subtitle: 'subtitle2',
+      content: {'field1': 'Content12', 'field2': 'Content22'},
+      age_range: {min: 2, max: 10, step: 1},
+      person: {
+        title: 'mr',
+        name: 'Markos2',
+        age: 5,
+        has_license: true,
+        nicknames: ['Power Ranger2', 'Captain Planet2'],
+        friends: [{name: 'John Doe2', age:'Unknown2'}, {name: 'Jean Doe2', age:'25'}],
+      }
+    };
+
+    const multiObjects = [object, object2];
 
     document
       .querySelector('#add')
@@ -95,6 +109,13 @@
         });
     });
 
+    document
+      .querySelector('#addMulti')
+      .addEventListener('click', (e) => {
+        const template = cte.newDom('basic', '.container', multiObjects);
+        for (const button of template.querySelector('button'))
+          button.parentNode.removeChild(button); 
+    });
   </script>
 </body>
 </html>

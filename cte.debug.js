@@ -16,6 +16,7 @@
   const ANONYMOUS_CTE_START = 'anonymous_cte_template_';
 
   // DOM helpers
+
   function ready(fn) {
     if (document.attachEvent ? document.readyState === "complete" : document.readyState !== "loading"){
       fn();
@@ -34,47 +35,10 @@
       el.setAttribute(attributeName, attributes[attributeName]);
   }
 
-  function populateObject(object, pathAttribute, value) {
-    const paths = pathAttribute.split('.');
 
-    let key = paths.pop();
 
-    if (!paths.length)
-      return value;
+  // General helpers
 
-    const last = resolveSafe(object, paths);
-    last[key] = value;
-  }
-/*
-  const globalOptions = {};
-  function setDynamicOptions(id, options) {
-    globalOptions[id] = options; 
-  }
-
-  function buildDynamicOptions(selectEl, optionsId) {
-    if (optionsId in globalOptions) {
-      const options = globalOptions[optionsId];
-
-      for (let i = 0; i < selectEl.length; ++i)
-        selectEl.remove(i);
-
-      for (const option of options) {
-        const element = option.element ? option.element : 'option';
-        const o = document.createElement(element);
-        for (const key of Object.keys(option))
-          if (key != 'element')
-            if (key == 'text')
-              o.text = option[key];
-            else
-              o.setAttribute(key, option[key]);
-
-        selectEl.add(o);
-      }
-    } else {
-      console.error(`Options with id ${optionsId} was not defined`);
-    }
-  }
-*/
   function resolveSafe(obj, paths) {
     return paths.reduce((prev, curr) => {
         if (!prev || !(curr in prev))
@@ -83,8 +47,6 @@
     }, obj);
   }
 
-  // person.friends.0.name
-  // person.nicknames.0
   function insertSafe(obj, paths, value) {
     let parentRoot;
     let root = obj;
@@ -109,6 +71,10 @@
       root.push(value);
     return obj;
   }
+
+
+
+  // Lib core
 
   const base = {
     wrapType(el, value) {
@@ -219,14 +185,7 @@
   
   function getTemplate(id) {
     if (id in appScope.templates) {
-      const template = appScope.templates[id].cloneNode(true);
-      for (const selectEl of template.querySelectorAll(OPTIONS_SELECTOR)) {
-        if (selectEl.tagName == "SELECT")
-          buildDynamicOptions(selectEl, selectEl.getAttribute(OPTIONS));
-        else
-          console.error(`Cannot use options-id ${selectEl.getAttribute(OPTIONS)} for then non <select> tag: <${selectEl.tagName}>`);
-      }
-      return template;
+      return appScope.templates[id].cloneNode(true);
     } else {
       console.error(`Template ${id} not defined`);
     }
@@ -284,7 +243,7 @@
   
   
   
-  
+  // New dom wrappers
   function newDom(template, container, object) {
     putObject(template, object);
     container.appendChild(template);
@@ -317,23 +276,6 @@
     } else {
       return newDomUsingSelector(templateId, selector, objects);
     }
-  }
-
-  function getChildObject(container) {
-    const object = {};
-    for (const el of container.querySelectorAll(DATA_SELECTOR)) {
-      const pathAttribute = el.getAttribute(DATA);
-
-      if (!pathAttribute.startsWith(THIS))
-        continue
-
-      if (pathAttribute == THIS)
-        return base.get(el);
-      else
-        populateObject(object, pathAttribute, base.get(el));
-    }
-
-    return object;
   }
 
   const lib = {
