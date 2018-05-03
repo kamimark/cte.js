@@ -204,9 +204,8 @@
   function resolveTemplate(template, object, objDataPath = '') {
     for (const el of template.querySelectorAll(DATA_SELECTOR)) {
       let elDataPath = el.getAttribute(DATA);
-      const indexOfThis = elDataPath.indexOf(THIS);
-      if (indexOfThis != -1)
-        elDataPath = elDataPath.substring(indexOfThis + (6 - (indexOfThis == 0 ? 0 : 1)));
+      if (elDataPath.startsWith(THIS))
+        elDataPath = elDataPath.substring(elDataPath == THIS ? 6 : 5);
 
       const dataPath = objDataPath + elDataPath;
       const objectValue = resolveSafe(object, dataPath.split('.'));
@@ -251,7 +250,7 @@
             for (const child of childTemplate.querySelectorAll(DATA_SELECTOR)) {
               const childDataPath = child.getAttribute(DATA);
               if (!childDataPath.startsWith(THIS))
-                child.setAttribute(DATA, `${dataPath}.$this.${childDataPath}`);
+                child.setAttribute(DATA, `$this.${childDataPath}`);
             }
             el.appendChild(childTemplate);
           }
