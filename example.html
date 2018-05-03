@@ -6,12 +6,19 @@
     .hidden {
       display: none;
     }
+    [cte] {
+      display: none;
+    }
   </style>
 </head>
 <body>
   <li cte="friend-item">
     <span data="name"></span>&nbsp;<span data="age"></span>
   </li>
+  <!-- INVALID
+  li cte="nicknames-item">
+    <span data="$this"></span>
+  </li-->
   <div cte="person-template">
       <select data="title">
       <option value="mr">Mr</option>
@@ -25,19 +32,20 @@
       <br/>
     <input type="number" data="money" placeholder="money"></input>
     <br/>
-    <input type="range" data="age" attrs="age_range" placeholder="age"></input>
+    <input type="range" data="age" attrs="$global.age_range" placeholder="age"></input>
     <br/>
     <label>Has license:</label><input type="checkbox" data="has_license"></input>
     <br/>
-    <!--ul data="nicknames">
+    <ul data="friends" cte-ref="friend-item"></ul>
+    <ul data="nicknames">
+      <li><b><span data="$this"></span></b></li>
+    </ul>
+    <ul data="array2d">
       <li>
-        <ul data="this">
-          <li><b><span data="this"></span></b></li>
+        <ul data="$this">
+          <li><b><span data="$this"></span></b></li>
         </ul>
       </li>
-    </ul-->
-    <ul data="friends" cte-ref="friend-item">
-
     </ul>
   </div>
 
@@ -58,11 +66,11 @@
 
   <div class="container"></div>
   <script>
+    cte.$global.age_range = {min: 2, max: 10, step: 1};
     let object = {
       title: 'title',
       subtitle: 'subtitle',
       content: {'field1': 'Content1', 'field2': 'Content2'},
-      age_range: {min: 2, max: 10, step: 1},
       person: {
         title: 'mr',
         name: 'Markos',
@@ -70,6 +78,7 @@
         has_license: true,
         nicknames: ['Power Ranger', 'Captain Planet'],
         friends: [{name: 'John Doe', age:'Unknown'}, {name: 'Jean Doe', age:'25'}],
+        array2d: [[1,2,3],[1,2,3],[1,2,3]]
       }
     };
 
@@ -77,7 +86,6 @@
       title: 'title2',
       subtitle: 'subtitle2',
       content: {'field1': 'Content12', 'field2': 'Content22'},
-      age_range: {min: 2, max: 10, step: 1},
       person: {
         title: 'mr',
         name: 'Markos2',
@@ -112,9 +120,10 @@
     document
       .querySelector('#addMulti')
       .addEventListener('click', (e) => {
-        const template = cte.newDom('basic', '.container', multiObjects);
-        for (const button of template.querySelector('button'))
-          button.parentNode.removeChild(button); 
+        const templates = cte.newDom('basic', '.container', multiObjects);
+        for (const template of templates)
+          for (const button of template.querySelectorAll('button'))
+            button.parentNode.removeChild(button); 
     });
   </script>
 </body>
