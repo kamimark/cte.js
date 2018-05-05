@@ -1,8 +1,10 @@
 'use strict';
 
 (() => {
-  const THIS = '$this';
-  const THIS_SELECTOR = '[data="$this"]';
+  const GLOBAL = '$global';
+  const IT = '$it';
+  const IT_SELECTOR = '[data="$it"]';
+  const SIZE_OF_IT = IT.length;
   const OPTIONS = 'cte-options';
   const OPTIONS_SELECTOR = '[cte-options]';
   const DATA = 'data';
@@ -44,7 +46,7 @@
     }
 
     if (!parent)
-      console.error('No parent for ${el} contains [data]');
+      console.error(`No parent for ${el} contains ${DATA_SELECTOR}`);
     return parent;
   }
 
@@ -60,27 +62,33 @@
   }
 
   function insertSafe(object, paths, value) {
-    let parentRoot;
     let root = object;
-    const key = paths.pop();
 
-    for (const i in paths) {
+    for (let i = 0; i < paths.length - 1; ++i) {
       const path = paths[i];
-      if (path == "0" && !Array.isArray(root)) {
-        root = {};
-        parentRoot[paths[i - 1]] = [root];
-      } else {
-        if (!(path in root))
-          root[path] = {};
-        parentRoot = root;
-        root = root[path]; 
+      let newRoot;
+      if (path in root) {
+        newRoot = root[path];
+      } else { 
+        if (isNaN(paths[i + 1]))
+          newRoot = {};
+        else
+          newRoot = []; 
+
+        if (Array.isArray(root))
+          root.push(newRoot);
+        else
+          root[path] = newRoot;
       }
+
+      root = newRoot;
     }
 
-    if (!Array.isArray(root) || key in root)
-      root[key] = value;
-    else
+    const key = paths[paths.length - 1];
+    if (Array.isArray(root) && !(key in root))
       root.push(value);
+    root[key] = value;
+
     return object;
   }
 
@@ -158,21 +166,10 @@
       }
     },
     get(el, value) {
-      if (el.anonymousChildTemplate) {
-        if (el.children.length > 1) {
-          const result = [];
-          for (const child of el.children)
-            result.push(getChildObject(child));
-          return result;
-        } else {
-          return getChildObject(el.children[0]);
-        }
-      } else {
-        if (el.tagName in base.specialTags)
-          return base.wrapType(el, base.specialTags[el.tagName].get(el));
-        else
-          return base.wrapType(el, el.innerHTML);
-      }
+      if (el.tagName in base.specialTags)
+        return base.wrapType(el, base.specialTags[el.tagName].get(el));
+      else
+        return base.wrapType(el, el.innerHTML);
     },
     set(el, value) {
       if (el.tagName in base.specialTags)
@@ -193,8 +190,8 @@
     }
   }
 
-  function resolveThis(template, scope) {
-    for (const el of template.querySelectorAll(THIS_SELECTOR)) {
+  function resolveIT(template, scope) {
+    for (const el of template.querySelectorAll(IT_SELECTOR)) {
       const parentEl = parentObjectContainer(el);
       el.setAttribute('parent-data', parentEl.getAttribute(DATA));
       el.removeAttribute(DATA);
@@ -204,25 +201,39 @@
   function resolveTemplate(template, object, objDataPath = '') {
     for (const el of template.querySelectorAll(DATA_SELECTOR)) {
       let elDataPath = el.getAttribute(DATA);
-      if (elDataPath.startsWith(THIS))
-        elDataPath = elDataPath.substring(elDataPath == THIS ? 6 : 5);
+      if (elDataPath.startsWith(IT))
+        if (elDataPath == IT)
+          elDataPath = elDataPath.substring(SIZE_OF_IT);
+        else
+          elDataPath = elDataPath.substring(SIZE_OF_IT + 1);
+
+      if (objDataPath && elDataPath)
+        elDataPath = '.' + elDataPath;
 
       const dataPath = objDataPath + elDataPath;
       const objectValue = resolveSafe(object, dataPath.split('.'));
 
       if (Array.isArray(objectValue)) {
-        const childTemplate = el.children.item(0);
-        if (!childTemplate)
+        if (!el.children.length)
           continue;
-        childTemplate.ctePassed = true;
+
+        const children = el.cloneNode(true).children;
         removeChildren(el);
 
         for (let i = 0; i < objectValue.length; ++i) {
-          const child = childTemplate.cloneNode(true);
-          resolveTemplate(child, object, `${dataPath}.${i}`);
-          el.appendChild(child);
+          const fakeParent = document.createElement("DIV");
+          for (const childTemplate of children)
+            fakeParent.appendChild(childTemplate.cloneNode(true));
+
+          resolveTemplate(fakeParent, object, `${dataPath}.${i}`);
+          for (const child of fakeParent.children)
+            el.appendChild(child);
         }
       } else if (!el.ctePassed) {
+        if (typeof objectValue == "function")
+          objectValue = objectValue();
+        else
+          el.cteDataPath = dataPath;
         base.set(el, objectValue);
       }
 
@@ -240,29 +251,25 @@
         const isArray = Array.isArray(objectValue);
 
         el.removeAttribute(CTE_REF);
-        el.ctePassed = true;
         removeChildren(el);
 
         const template = getTemplate(refId);
-        if (isArray) {
-          for (let i = 0; i < objectValue.length; ++i) {
-            const childTemplate = template.cloneNode(true);
-            for (const child of childTemplate.querySelectorAll(DATA_SELECTOR)) {
-              const childDataPath = child.getAttribute(DATA);
-              if (!childDataPath.startsWith(THIS))
-                child.setAttribute(DATA, `$this.${childDataPath}`);
-            }
-            el.appendChild(childTemplate);
-          }
-        } else {
-          for (const child of template.querySelectorAll(DATA_SELECTOR)) {
-            const childDataPath = child.getAttribute(DATA);
-            if (!childDataPath.startsWith(THIS))
-              child.setAttribute(DATA, `${dataPath}.${childDataPath}`);
-          }
 
-          el.appendChild(template);
+        for (const child of template.querySelectorAll(DATA_SELECTOR)) {
+          const childDataPath = child.getAttribute(DATA);
+          if (childDataPath.startsWith(IT))
+            continue;
+
+          if (isArray)
+            child.setAttribute(DATA, `${IT}.${childDataPath}`);
+          else
+            child.setAttribute(DATA, `${dataPath}.${childDataPath}`);
         }
+
+        el.appendChild(template);
+
+        if (!isArray)
+          el.removeAttribute(DATA);
       }
 
       refs = template.querySelectorAll(CTE_REF_SELECTOR);
@@ -270,10 +277,15 @@
   }
 
   function putObject(template, object) {
+    if (Array.isArray(object)) {
+      console.error("Cannot handle array as object for populating a singular template");
+      return;
+    }
+
     for (const el of template.querySelectorAll(ATTRS_SELECTOR)) {
-      const dataPath = el.getAttribute('attrs');
+      const dataPath = el.getAttribute(ATTRS);
       const paths = dataPath.split('.');
-      if (paths[0] == '$global')
+      if (paths[0] == GLOBAL)
         setAttributes(el, resolveSafe($global, paths));
       else
         setAttributes(el, resolveSafe(object, paths));
@@ -286,19 +298,12 @@
       el.ctePassed = false;
   }
 
-  function updateObject(template, dataObj) {
-    if (Array.isArray(dataObj))
-      console.error("Cannot handle array as object for populating a singular template");
-    else
-      putObject(template, dataObj);
-  }
-
   function getObject(template) {
     const object = {};
     for (const el of template.querySelectorAll(DATA_SELECTOR)) {
-      const pathAttribute = el.getAttribute(DATA);
-      if (!el.hasAttribute(CTE_REF))
-        insertSafe(object, pathAttribute.split('.'), base.get(el));
+      const dataPath = el.cteDataPath;
+      if (dataPath !== undefined)
+        insertSafe(object, dataPath.split('.'), base.get(el));
     }
     return object;
   }
@@ -347,9 +352,7 @@
     $global,
     getTemplate,
     newDom: newDomUsingSelectorAndObjects,
-    updateObject,
-    getObject,
-//    setDynamicOptions
+    getObject
   };
 
   const appScope = insertSafe(window, 'com.mental-elemental.cte'.split('.'), {});
@@ -357,14 +360,11 @@
   const templates = {};
 
   ready(() => {
-    //let anonymousCount = 0;
     for (const template of document.querySelectorAll(CTE_SELECTOR)) {
       const id = template.getAttribute(CTE);
       template.removeAttribute(CTE);
       template.parentNode.removeChild(template);
       templates[id] = template;
-
-      // TODO Generate anonymous templates using "this"
     }    
   });
 
