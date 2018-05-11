@@ -70,7 +70,6 @@
     <div cte="ref-array-object-test">
       <span id="x" data="x"></span>
     </div>
-    
 
     <div cte="test">
       <div id="basic-test" data="basic"></div>
@@ -80,18 +79,28 @@
       <div id="array-object-test" data="arrayObject"><span data="x"></span></div>
       <div cte-ref="ref-array-object-test" id="ref-array-object-test" data="arrayObject"></div>
 
-      <ul id="simple-array-test" data="array"><li data="$it"></li></ul>
-      <ul id="nested-array-test" data="array2d"><li data="$it"><ul><li data="$it"></li></ul></li></ul>
+      <ul id="simple-array-test" data="array"><li data="$it" title="From Array"></li></ul>
+      <ul id="nested-array-test" data="array2d"><li data="$it"><ul><li data="$it" title="From 2D array"></li></ul></li></ul>
 
-      <input id="input-checkbox-test" type="checkbox" data="input.checkbox"></input>
-      <input id="input-number-test" type="number" data="input.number"></input>
-      <input id="input-text-test" type="text" data="input.text"></input>
-      
+      <input id="input-checkbox-test" type="checkbox" data="input.checkbox"></input><br/>
+      <input id="input-number-test" type="number" data="input.number" title="Number only"></input><br/>
+      <input id="input-text-test" type="text" data="input.text" title="Text"></input><br/>
+      <input id="input-range-test" type="range" data="input.range" title="Range as object"></input><br/>
+      <input id="input-range-attr-test" type="range" data="input.rangeAttr" attrs="$global.test_range" title="Range as value using attrs"></input>
+
+      <a id="simple-a-test" data="aRaw" title="Passed as string"></a><br/>
+      <a id="simple-a-static-name-test" data="aRaw" title="With static name">Here</a><br/>
+      <a id="a-test" data="a" title="Passed as object"></a><br/>
+
       <select id="select-test" data="select">
         <option value="s1">Not Selected</option>
         <option value="s2">Selected</option>
         <option value="s3">Not Selected</option>
       </select>
+
+      <div visibility="hideme" style="color:red;">
+        <label >Failed test case</label><span><b data="hideme"></b></span>
+      </div>
     </div>
   </div>
   <script>
@@ -112,11 +121,18 @@
           checkbox: true,
           number: 5,
           text: "Text",
+          range: {min: 0, max: 10, defaultValue: 3}
         },
-        select: 's2'
+        select: 's2',
+        aRaw: 'http://www.google.com/',
+        a: {
+          href: 'http://www.google.com/',
+          innerHTML: 'Google'
+        },
       };
       try
       {
+        cte.$global.test_range = {min: 2, max: 10, step: 1};
         const template = cte.newDom('test', '#test-container', testObject);
 
         report('Basic', template.querySelector('#basic-test').innerHTML == testObject.basic);
@@ -144,7 +160,14 @@
         report('Input.Checkbox', template.querySelector('#input-checkbox-test').checked == testObject.input.checkbox);
         report('Input.Number', template.querySelector('#input-number-test').value == testObject.input.number);
         report('Input.Text', template.querySelector('#input-text-test').value == testObject.input.text);
+        report('Input.Range', template.querySelector('#input-range-test').value == testObject.input.range.defaultValue);
 
+        const simpleATest = template.querySelector('#simple-a-test');
+        report('Simple Link', simpleATest.innerHTML == simpleATest.href && simpleATest.href == testObject.aRaw);
+        const linkTest = template.querySelector('#a-test');
+        report('Link', linkTest.innerHTML == testObject.a.innerHTML && linkTest.href == testObject.a.href);
+        const staticLinkTest = template.querySelector('#simple-a-static-name-test');
+        report('Static Link', staticLinkTest.innerHTML != staticLinkTest.href && linkTest.href == testObject.aRaw);
         report('Select', template.querySelector('#select-test').value == testObject.select);
         
         const returned = cte.getObject(template, {});
