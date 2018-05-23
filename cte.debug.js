@@ -11,6 +11,8 @@
   const DATA_SELECTOR = '[data]';
   const DATA_TYPE = 'data-type';
   const DATA_TYPE_SELECTOR = '[data-type]';
+  const VISIBILITY = 'visibility';
+  const VISIBILITY_SELECTOR = '[visibility]';
   const CTE = 'cte';
   const CTE_SELECTOR = '[cte]';
   const CTE_REF = 'cte-ref';
@@ -55,9 +57,9 @@
 
   function resolveSafe(object, paths) {
     return paths.reduce((prev, curr) => {
-        if (!prev || !(curr in prev))
-          return undefined;
-        return prev[curr];
+      if (!prev || !(curr in prev))
+        return undefined;
+      return prev[curr];
     }, object);
   }
 
@@ -140,7 +142,23 @@
       }
     },
     specialTags: {
-      INPUT: {
+      A: {
+        set(el, value) {
+          el.href = value;
+          if (!el.innerHTML)
+            el.innerHTML = value;
+        },
+        get(el) {
+          return el.href;
+        }
+      },IMG: {
+        set(el, value) {
+          el.src = value;
+        },
+        get(el) {
+          return el.src;
+        }
+      }, INPUT: {
         set(el, value) {
           const type = el.getAttribute('type');
           if (type in base.specialInputTags)
@@ -155,8 +173,7 @@
           else
             return el.value;
         }
-      },
-      SELECT: {
+      }, SELECT: {
         set(el, value) {
           el.value = value;
         },
@@ -165,17 +182,27 @@
         }
       }
     },
-    get(el, value) {
-      if (el.tagName in base.specialTags)
-        return base.wrapType(el, base.specialTags[el.tagName].get(el));
-      else
-        return base.wrapType(el, el.innerHTML);
+    get(el, object) {
+      if (object && typeof object == "object") {
+        for (const key in Object.keys(object))
+          object[key] = el[key];
+      } else {
+        if (el.tagName in base.specialTags)
+          return base.wrapType(el, base.specialTags[el.tagName].get(el));
+        else
+          return base.wrapType(el, el.innerHTML);
+      }
     },
     set(el, value) {
-      if (el.tagName in base.specialTags)
-        base.specialTags[el.tagName].set(el, value);
-      else
-        el.innerHTML = value ? value : '';      
+      if (typeof value == "object") {
+        for (const key of Object.keys(value))
+          el[key] = value[key];
+      } else {
+        if (el.tagName in base.specialTags)
+          base.specialTags[el.tagName].set(el, value);
+        else
+          el.innerHTML = value ? value : '';      
+      }
     }
   };
 
@@ -238,6 +265,13 @@
       }
 
       el.ctePassed = true;
+    }
+
+    for (const el of template.querySelectorAll(VISIBILITY_SELECTOR)) {
+      const visibilityPath = el.getAttribute(VISIBILITY);
+      const objectValue = resolveSafe(object, visibilityPath.split('.'));
+      if (!objectValue)
+        el.style.display = 'none';
     }
   }
   
@@ -302,8 +336,10 @@
     const object = {};
     for (const el of template.querySelectorAll(DATA_SELECTOR)) {
       const dataPath = el.cteDataPath;
-      if (dataPath !== undefined)
-        insertSafe(object, dataPath.split('.'), base.get(el));
+      if (dataPath !== undefined) {
+        const paths = dataPath.split('.');
+        insertSafe(object, paths, base.get(el, resolveSafe(object, paths)));
+      }
     }
     return object;
   }
@@ -352,6 +388,7 @@
     $global,
     getTemplate,
     newDom: newDomUsingSelectorAndObjects,
+    newDomByContainer : newDomUsingTemplateId,
     getObject
   };
 
