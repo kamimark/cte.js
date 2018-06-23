@@ -1,25 +1,21 @@
 'use strict';
 
 (() => {
-  const GLOBAL = '$global';
   const IT = '$it';
   const IT_SELECTOR = '[data="$it"]';
   const SIZE_OF_IT = IT.length;
-  const OPTIONS = 'cte-options';
-  const OPTIONS_SELECTOR = '[cte-options]';
   const DATA = 'data';
   const DATA_SELECTOR = '[data]';
-  const DATA_TYPE = 'data-type';
-  const DATA_TYPE_SELECTOR = '[data-type]';
   const VISIBILITY = 'visibility';
   const VISIBILITY_SELECTOR = '[visibility]';
   const CTE = 'cte';
   const CTE_SELECTOR = '[cte]';
   const CTE_REF = 'cte-ref';
   const CTE_REF_SELECTOR = '[cte-ref]';
-  const ATTRS = 'attrs';
-  const ATTRS_SELECTOR = '[attrs]';
-  const ANONYMOUS_CTE_START = 'anonymous_cte_template_';
+  const TRANSFORMER = 'trans';
+
+  const transformers = { _DEFAULTS: {} };
+  const defaultTrantransformers = transformers._DEFAULTS;
 
   // DOM helpers
 
@@ -55,156 +51,169 @@
 
   // General helpers
 
-  function resolveSafe(object, paths) {
-    return paths.reduce((prev, curr) => {
+  function trunc(string, max) {
+    if (!string)
+      return string;
+
+    if (string.length <= max)
+      return string;
+
+    let end = 0;
+    let allowed = max;
+    let more = 0;
+    let perfectFit = false;
+    let i = 0;
+    for (i = 0; i < string.length && allowed > 0; ++i) {
+      if (more == 0)
+        --allowed;
+
+      if (string[i] == '&')
+        more = allowed;
+      else if (string[i] == ';')
+        more = 0;
+
+      ++end;
+    }
+
+    if (more)
+      end = string.lastIndexOf('&') + more;
+
+    if (i + 1 == string.length)
+      return string;
+    return string.substring(0, end - 2) + '&hellip;';
+  }
+
+  function resolveSafe(object, path) {
+    return path.split('.').reduce((prev, curr) => {
+      if (curr === '')
+        return prev;
       if (!prev || !(curr in prev))
         return undefined;
       return prev[curr];
     }, object);
   }
 
-  function insertSafe(object, paths, value) {
+  function insertSafe(object, path, value) {
+    if (typeof object != "object")
+      return console.error(`insertSafe Object for path ${path} is not an object`);
+
     let root = object;
+    const paths = path.split('.');
 
-    for (let i = 0; i < paths.length - 1; ++i) {
+    const lastIndex = paths.length - 1;
+    for (let i = 0; i < lastIndex; ++i) {
       const path = paths[i];
-      let newRoot;
-      if (path in root) {
-        newRoot = root[path];
-      } else { 
-        if (isNaN(paths[i + 1]))
-          newRoot = {};
-        else
-          newRoot = []; 
-
-        if (Array.isArray(root))
-          root.push(newRoot);
-        else
-          root[path] = newRoot;
-      }
-
-      root = newRoot;
+      if (typeof root[path] == "object")
+        root = root[path];
+      else
+        root = root[path] = {};
     }
 
-    const key = paths[paths.length - 1];
-    if (Array.isArray(root) && !(key in root))
-      root.push(value);
-    root[key] = value;
-
+    root[paths[lastIndex]] = value;
     return object;
   }
 
+  /*
+  function resolveSafe(object, path) {
+    if (!path)
+      return undefined;
+    path = path.trim();
+    if (!path)
+      return undefined;
+
+    const randomString = 'qwertyuiopasdfghjklzxcvbnmqwertyuiop';
+    window[randomString] = object;
+    let result;
+    try
+    {
+      result = eval(`${randomString}.${path}`);
+    } catch(e) {
+      return undefined;
+    }
+    delete window[randomString];
+    return result;
+  }
+*/
+
+  
+/*
+  function merge(to, from) {
+    for (const key of Object.keys(from)) {
+      const fObj = from[key];
+      const tObj = to[key];
+      if (tObj) {
+        if (typeof tObj != typeof fObj)
+          return console.error('Type mismatch');
+
+        if (typeof tObj == "object") {
+          merge(tObj, fObj);
+        } else if (Array.isArray(tObj)) {
+          for (const o of fObj)
+            tObj.push(o);
+        } else {
+          to[key] = fObj;
+        }
+      } else {
+        to[key] = fObj;
+      }
+    }
+
+    return to;
+  }
+
+*/
+  function getNumberFromElement(el, value) {
+    if (value === null || value === undefined) {
+      if (el.defaultValue)
+        return el.defaultValue;
+      if (el.min || el.min === 0)
+        return el.min;
+      return 0;
+    } else {
+      return value * 1
+    }
+  }
 
 
   // Lib core
 
-  const base = {
-    wrapType(el, value) {
-      switch (el.getAttribute(DATA_TYPE)) {
-        case "number":
-          return value * 1;
-        default:
-          return value;
-      }
-    },
-    getNumber(el, value) {
-      if (value === null || value === undefined)
-        value = el.getAttribute('defaultValue');
-      if (value === null || value === undefined)
-        value = el.getAttribute('min');
-      return value === null || value === undefined ? '' : value;
-    },
-    specialInputTags: {
-      checkbox: { 
-        set(el, value) {
-          el.checked = (value && value != "false");
-        },
-        get(el) {
-          return el.checked;
-        }
-      },
-      number: {
-        set(el, value) {
-          el.value = base.getNumber(el, value);
-        },
-        get (el) {
-          return el.value * 1;
-        }
-      },
-      range: {
-        set(el, value) {
-          value = base.getNumber(el, value);
-          el.value = value ? value : 0;
-        },
-        get(el) {
-          return el.value * 1;
-        }
-      }
-    },
-    specialTags: {
-      A: {
-        set(el, value) {
-          el.href = value;
-          if (!el.innerHTML)
-            el.innerHTML = value;
-        },
-        get(el) {
-          return el.href;
-        }
-      },IMG: {
-        set(el, value) {
-          el.src = value;
-        },
-        get(el) {
-          return el.src;
-        }
-      }, INPUT: {
-        set(el, value) {
-          const type = el.getAttribute('type');
-          if (type in base.specialInputTags)
-            base.specialInputTags[type].set(el, value);
-          else
-            el.value = value ? value : '';
-        },
-        get(el) {
-          const type = el.getAttribute('type');
-          if (type in base.specialInputTags)
-            return base.specialInputTags[type].get(el);
-          else
-            return el.value;
-        }
-      }, SELECT: {
-        set(el, value) {
-          el.value = value;
-        },
-        get(el) {
-          return el.value;
-        }
-      }
-    },
-    get(el, object) {
-      if (object && typeof object == "object") {
-        for (const key in Object.keys(object))
-          object[key] = el[key];
-      } else {
-        if (el.tagName in base.specialTags)
-          return base.wrapType(el, base.specialTags[el.tagName].get(el));
-        else
-          return base.wrapType(el, el.innerHTML);
-      }
-    },
-    set(el, value) {
-      if (typeof value == "object") {
-        for (const key of Object.keys(value))
-          el[key] = value[key];
-      } else {
-        if (el.tagName in base.specialTags)
-          base.specialTags[el.tagName].set(el, value);
-        else
-          el.innerHTML = value ? value : '';      
-      }
+  function getElementValue(el) {
+    const customTransformer = el.getAttribute(TRANSFORMER);
+    if (customTransformer) {
+      if (transformers[customTransformer])
+        return transformers[customTransformer].get(el);
+      else
+        return console.error(`Custom transformer ${customTransformer} specified but not defined.`);
     }
-  };
+
+    const defaultTrantransformer = defaultTrantransformers[el.tagName];
+    if (defaultTrantransformer) {
+      if (defaultTrantransformer.get)
+        return defaultTrantransformer.get(el);
+      return el.originalValue;
+    } else {
+      return el.innerHTML;
+    }
+  }
+
+  function setElementValue(el, value) {
+    const customTransformer = el.getAttribute(TRANSFORMER);
+    if (customTransformer) {
+      if (transformers[customTransformer])
+        return transformers[customTransformer].set(el, value);
+      else
+        return console.error(`Custom transformer ${customTransformer} specified but not defined.`);
+    }
+
+    const defaultTrantransformer = defaultTrantransformers[el.tagName];
+    if (defaultTrantransformer) {
+      if (!defaultTrantransformer.get)
+        el.originalValue = value;
+      return defaultTrantransformer.set(el, value);
+    } else {
+      el.innerHTML = value === undefined || value === null ? '' : value;
+    }
+  }
 
   function getTemplate(id) {
     if (id in templates) {
@@ -238,7 +247,7 @@
         elDataPath = '.' + elDataPath;
 
       const dataPath = objDataPath + elDataPath;
-      const objectValue = resolveSafe(object, dataPath.split('.'));
+      const objectValue = resolveSafe(object, dataPath);
 
       if (Array.isArray(objectValue)) {
         if (!el.children.length)
@@ -261,7 +270,7 @@
           objectValue = objectValue();
         else
           el.cteDataPath = dataPath;
-        base.set(el, objectValue);
+        setElementValue(el, objectValue);
       }
 
       el.ctePassed = true;
@@ -269,7 +278,7 @@
 
     for (const el of template.querySelectorAll(VISIBILITY_SELECTOR)) {
       const visibilityPath = el.getAttribute(VISIBILITY);
-      const objectValue = resolveSafe(object, visibilityPath.split('.'));
+      const objectValue = resolveSafe(object, visibilityPath);
       if (!objectValue)
         el.style.display = 'none';
     }
@@ -281,7 +290,7 @@
       for (const el of refs) {
         const refId = el.getAttribute(CTE_REF);
         const dataPath = el.getAttribute(DATA);
-        const objectValue = resolveSafe(object, dataPath.split('.'));
+        const objectValue = dataPath ? resolveSafe(object, dataPath) : null;
         const isArray = Array.isArray(objectValue);
 
         el.removeAttribute(CTE_REF);
@@ -289,15 +298,17 @@
 
         const template = getTemplate(refId);
 
-        for (const child of template.querySelectorAll(DATA_SELECTOR)) {
-          const childDataPath = child.getAttribute(DATA);
-          if (childDataPath.startsWith(IT))
-            continue;
-
-          if (isArray)
-            child.setAttribute(DATA, `${IT}.${childDataPath}`);
-          else
-            child.setAttribute(DATA, `${dataPath}.${childDataPath}`);
+        if (dataPath) {
+          for (const child of template.querySelectorAll(DATA_SELECTOR)) {
+            const childDataPath = child.getAttribute(DATA);
+            if (childDataPath.startsWith(IT))
+              continue;
+  
+            if (isArray)
+              child.setAttribute(DATA, `${IT}.${childDataPath}`);
+            else
+              child.setAttribute(DATA, `${dataPath}.${childDataPath}`);
+          }
         }
 
         el.appendChild(template);
@@ -316,15 +327,6 @@
       return;
     }
 
-    for (const el of template.querySelectorAll(ATTRS_SELECTOR)) {
-      const dataPath = el.getAttribute(ATTRS);
-      const paths = dataPath.split('.');
-      if (paths[0] == GLOBAL)
-        setAttributes(el, resolveSafe($global, paths));
-      else
-        setAttributes(el, resolveSafe(object, paths));
-    }
-
     expandTemplate(template, object);
     resolveTemplate(template, object);
 
@@ -332,22 +334,52 @@
       el.ctePassed = false;
   }
 
-  function getObject(template) {
-    const object = {};
-    for (const el of template.querySelectorAll(DATA_SELECTOR)) {
-      const dataPath = el.cteDataPath;
-      if (dataPath !== undefined) {
-        const paths = dataPath.split('.');
-        insertSafe(object, paths, base.get(el, resolveSafe(object, paths)));
+  function compress(object) {
+    if (typeof object != "object")
+      return object;
+
+    const keys = Object.keys(object);
+    if (keys.length == 0)
+      return object;
+
+    let isArray = true;
+    for (const key of keys) {
+      if (isNaN(key)) {
+        isArray = false;
+        break;
       }
     }
+
+    if (isArray) {
+      const numericKeys = [];
+      for (const key of keys)
+        numericKeys.push(key * 1);
+
+      const newObject = [];
+      for (const key of numericKeys.sort()) {
+        newObject.push(compress(object[key]));
+      }
+
+      return newObject;
+    }
+
+    for (const key of keys)
+      object[key] = compress(object[key]);
+
     return object;
   }
 
-  
-  
-  
-  
+  function getObject(template) {
+    const object = {};
+    for (const el of template.querySelectorAll(DATA_SELECTOR)) {
+      let dataPath = el.cteDataPath;
+      if (dataPath === undefined)
+        dataPath = el.getAttribute(DATA);
+      insertSafe(object, dataPath, getElementValue(el));
+    }
+    return compress(object);
+  }
+
   // New dom wrappers
   function newDom(template, container, object) {
     putObject(template, object);
@@ -383,16 +415,33 @@
     }
   }
 
-  const $global = {};
+  function newNodeById(templateId, objects) {
+    if (Array.isArray(objects)) {
+      const result = [];
+      for (const object of objects) {
+        const template = getTemplate(templateId);
+        putObject(template, object);
+        result.push(template);
+      }
+      return result;
+    } else {
+      const template = getTemplate(templateId);
+      putObject(template, objects);
+      return template;
+    }
+  }
+
   const lib = {
-    $global,
     getTemplate,
+    newNodeById: newNodeById,
     newDom: newDomUsingSelectorAndObjects,
     newDomByContainer : newDomUsingTemplateId,
-    getObject
+    getObject,
+    putObject,
+    transformers,
   };
 
-  const appScope = insertSafe(window, 'com.mental-elemental.cte'.split('.'), {});
+  const appScope = insertSafe(window, 'com.mental-elemental.cte', {});
   appScope.lib = lib;
   const templates = {};
 
@@ -406,4 +455,110 @@
   });
 
   window.cte = lib;
+
+  // Transformers
+  const valueTransformer = {
+    set(el, value) {
+      el.value = value === undefined || value === null ? '' : value;
+    },
+    get(el) {
+      return el.value;
+    }
+  };
+
+  const numberValueTransformer = {
+    set(el, value) {
+      if (isNaN(value) && value !== undefined)
+        return console.error(`Attempt to set into el value ${value} as a number`);
+      el.value = value * 1;
+    },
+    get(el) {
+      return getNumberFromElement(el, el.value);
+    }
+  };
+
+  const srcTransformer = {
+    set(el, value) {
+      el.src = value;
+    },
+    get(el) {
+      return el.src;
+    }
+  };
+
+  transformers['html-object'] = {
+    set(el, object) {
+      el.originalKeys = Object.keys(object);
+      for (const key of el.originalKeys) {
+        if (object[key] !== undefined)
+          el[key] = object[key];
+      }
+    }, get(el) {
+      const object = {};
+      for (const key of el.originalKeys) {
+        object[key] = el[key];
+      }
+      return object;
+    }    
+  };
+
+  transformers['attr-object'] = {
+    set(el, object) {
+      el.originalKeys = Object.keys(object);
+      for (const key of el.originalKeys)
+        if (object[key] !== undefined)
+          el.setAttribute(key, object[key]);
+    }, get(el) {
+      const object = {};
+      for (const key of el.originalKeys)
+        object[key] = el.getAttribute(key);
+      return object;
+    }    
+  };
+  
+  transformers['value'] = valueTransformer;
+  transformers['number-value'] = numberValueTransformer;
+  transformers['src-transformer'] = srcTransformer;
+
+  defaultTrantransformers['A'] = {
+    set(el, value) {
+      el.href = value;
+      if (!el.innerHTML)
+        el.innerHTML = value;
+    },
+    get(el) {
+      return el.href;
+    }
+  };
+
+  defaultTrantransformers['IMG'] = srcTransformer;
+  defaultTrantransformers['IFRAME'] = srcTransformer;
+  defaultTrantransformers['SELECT'] = valueTransformer;
+  defaultTrantransformers['TEXTAREA'] = valueTransformer;
+  defaultTrantransformers['INPUT'] = {
+    range: numberValueTransformer,
+    number: numberValueTransformer,
+    checkbox: {
+      set(el, value) {
+        el.checked = (value && value != "false");
+      },
+      get(el) {
+        return el.checked;
+      }
+    },
+    set(el, value) {
+      const type = el.getAttribute('type');
+      if (this[type])
+        this[type].set(el, value);
+      else
+        valueTransformer.set(el, value);
+    },
+    get(el) {
+      const type = el.getAttribute('type');
+      if (this[type])
+        return this[type].get(el);
+      else
+        return valueTransformer.get(el);
+    }
+  };
 })();

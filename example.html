@@ -28,7 +28,7 @@
     <br/>
     <input type="number" data="money" placeholder="money"></input>
     <br/>
-    <input type="range" data="age" attrs="$global.age_range" placeholder="age"></input>
+    <input type="range" data="age" placeholder="age"></input>
     <br/>
     <label>Has license:</label><input type="checkbox" data="has_license"></input>
     <br/>
@@ -76,7 +76,7 @@
       <div id="referenced-test" cte-ref="referenced-test" data="referenced"></div>
       <div id="object-test"><span id="x" data="object.x"></span><span id="y" data="object.y"></span></div>
 
-      <div id="array-object-test" data="arrayObject"><span data="x"></span></div>
+      <div id="array-object-test" data="arrayObject"><span data="$it.x"></span></div>
       <div cte-ref="ref-array-object-test" id="ref-array-object-test" data="arrayObject"></div>
 
       <ul id="simple-array-test" data="array"><li data="$it" title="From Array"></li></ul>
@@ -85,12 +85,13 @@
       <input id="input-checkbox-test" type="checkbox" data="input.checkbox"></input><br/>
       <input id="input-number-test" type="number" data="input.number" title="Number only"></input><br/>
       <input id="input-text-test" type="text" data="input.text" title="Text"></input><br/>
-      <input id="input-range-test" type="range" data="input.range" title="Range as object"></input><br/>
-      <input id="input-range-attr-test" type="range" data="input.rangeAttr" attrs="$global.test_range" title="Range as value using attrs"></input>
+      <input id="input-range-test" type="range" data="input.range" trans="html-object" title="Range as object"></input><br/>
+      <input id="input-range-attr-test" type="range" data="input.rangeAttr" trans="attr-object" title="Range using attrs"></input>
+      <input id="input-range-value-test" type="range" data="input.rangeValue" title="Range using value" min="0" max="10" defaultValue="3"></input>
 
       <a id="simple-a-test" data="aRaw" title="Passed as string"></a><br/>
       <a id="simple-a-static-name-test" data="aRaw" title="With static name">Here</a><br/>
-      <a id="a-test" data="a" title="Passed as object"></a><br/>
+      <a id="a-test" data="a" trans="html-object" title="Passed as object"></a><br/>
 
       <select id="select-test" data="select">
         <option value="s1">Not Selected</option>
@@ -121,7 +122,9 @@
           checkbox: true,
           number: 5,
           text: "Text",
-          range: {min: 0, max: 10, defaultValue: 3}
+          range: {min: 0, max: 10, defaultValue: 3, value: undefined},
+          rangeAttr: {min: 0, max: 10, defaultValue: 3, value: 4},
+          rangeValue: 6
         },
         select: 's2',
         aRaw: 'http://www.google.com/',
@@ -130,9 +133,9 @@
           innerHTML: 'Google'
         },
       };
+
       try
       {
-        cte.$global.test_range = {min: 2, max: 10, step: 1};
         const template = cte.newDom('test', '#test-container', testObject);
 
         report('Basic', template.querySelector('#basic-test').innerHTML == testObject.basic);
@@ -161,6 +164,7 @@
         report('Input.Number', template.querySelector('#input-number-test').value == testObject.input.number);
         report('Input.Text', template.querySelector('#input-text-test').value == testObject.input.text);
         report('Input.Range', template.querySelector('#input-range-test').value == testObject.input.range.defaultValue);
+        report('Input.Range.Value', template.querySelector('#input-range-value-test').value == testObject.input.rangeValue);
 
         const simpleATest = template.querySelector('#simple-a-test');
         report('Simple Link', simpleATest.innerHTML == simpleATest.href && simpleATest.href == testObject.aRaw);
@@ -170,7 +174,7 @@
         report('Static Link', staticLinkTest.innerHTML != staticLinkTest.href && linkTest.href == testObject.aRaw);
         report('Select', template.querySelector('#select-test').value == testObject.select);
         
-        const returned = cte.getObject(template, {});
+        const returned = cte.getObject(template);
 
         report('GetObject.Basic', testObject.basic == returned.basic);
         report('GetObject.Referenced', testObject.referenced.key == returned.referenced.key);
@@ -181,9 +185,11 @@
         report('GetObject.Input.Checkbox', testObject.input.checkbox === returned.input.checkbox);
         report('GetObject.Input.Number', testObject.input.number === returned.input.number);
         report('GetObject.Input.Text', testObject.input.text === returned.input.text);
-        
+        report('GetObject.Input.Range', testObject.input.range.defaultValue == returned.input.range.value);
+        report('GetObject.Input.RangeAttr', testObject.input.rangeAttr.value == returned.input.rangeAttr.value);
+        report('GetObject.Input.RangeValue', testObject.input.rangeValue == returned.input.rangeValue);
       } catch (e) {
-        report('General', false);
+        report('Thrown Exception', false);
         console.error(e)
       }
 
