@@ -65,33 +65,39 @@
   
   <div id="test-container">
     <div cte="referenced-test">
-      <div id="key" data="key"></div>
+      <div id="key" data="key" getter="raw"></div>
     </div>
     <div cte="ref-array-object-test">
-      <span id="x" data="x"></span>
+      <span id="x" data="x" getter="raw"></span>
     </div>
 
     <div cte="test">
-      <div id="basic-test" data="basic"></div>
+      <div id="basic-test" data="basic" getter="raw"></div>
       <div id="referenced-test" cte-ref="referenced-test" data="referenced"></div>
-      <div id="object-test"><span id="x" data="object.x"></span><span id="y" data="object.y"></span></div>
+      <div id="object-test"><span id="x" data="object.x" getter="raw"></span><span id="y" data="object.y" getter="raw"></span></div>
 
-      <div id="array-object-test" data="arrayObject"><span data="$it.x"></span></div>
+      <div id="array-object-test" data="arrayObject"><span data="x"></span></div>
       <div cte-ref="ref-array-object-test" id="ref-array-object-test" data="arrayObject"></div>
 
-      <ul id="simple-array-test" data="array"><li data="$it" title="From Array"></li></ul>
-      <ul id="nested-array-test" data="array2d"><li data="$it"><ul><li data="$it" title="From 2D array"></li></ul></li></ul>
+      <ul id="simple-array-test" data="array"><li data="$it" title="From Array" getter="raw"></li></ul>
+      <ul id="nested-array-test" data="array2d">
+        <li>
+          <ul data="$it">
+            <li data="$it" title="From 2D array" getter="raw"></li>
+          </ul>
+        </li>
+      </ul>
 
       <input id="input-checkbox-test" type="checkbox" data="input.checkbox"></input><br/>
       <input id="input-number-test" type="number" data="input.number" title="Number only"></input><br/>
       <input id="input-text-test" type="text" data="input.text" title="Text"></input><br/>
-      <input id="input-range-test" type="range" data="input.range" trans="html-object" title="Range as object"></input><br/>
-      <input id="input-range-attr-test" type="range" data="input.rangeAttr" trans="attr-object" title="Range using attrs"></input>
+      <input id="input-range-test" type="range" data="input.range" setter="html-object" title="Range as object"></input><br/>
+      <input id="input-range-attr-test" type="range" data="input.rangeAttr" setter="attr-object" title="Range using attrs"></input>
       <input id="input-range-value-test" type="range" data="input.rangeValue" title="Range using value" min="0" max="10" defaultValue="3"></input>
 
       <a id="simple-a-test" data="aRaw" title="Passed as string"></a><br/>
       <a id="simple-a-static-name-test" data="aRaw" title="With static name">Here</a><br/>
-      <a id="a-test" data="a" trans="html-object" title="Passed as object"></a><br/>
+      <a id="a-test" data="a" setter="html-object" title="Passed as object"></a><br/>
 
       <select id="select-test" data="select">
         <option value="s1">Not Selected</option>
@@ -99,8 +105,8 @@
         <option value="s3">Not Selected</option>
       </select>
 
-      <div visibility="hideme" style="color:red;">
-        <label >Failed test case</label><span><b data="hideme"></b></span>
+      <div data="hideme" setter="visibility" style="color:red;">
+        <label >Failed test cases</label><span><b data="hideme"></b></span>
       </div>
     </div>
   </div>
@@ -136,45 +142,46 @@
 
       try
       {
-        const template = cte.newDom('test', '#test-container', testObject);
+        const node = cte.newNode('test', testObject);
+        document.getElementById('test-container').appendChild(node);
 
-        report('Basic', template.querySelector('#basic-test').innerHTML == testObject.basic);
-        report('Referenced', template.querySelector('#referenced-test #key').innerHTML == testObject.referenced.key);
+        report('Basic', node.querySelector('#basic-test').innerHTML == testObject.basic);
+        report('Referenced', node.querySelector('#referenced-test #key').innerHTML == testObject.referenced.key);
         report('Simple Object',
-          template.querySelector('#object-test #x').innerHTML == testObject.object.x &&
-          template.querySelector('#object-test #y').innerHTML == testObject.object.y);
+          node.querySelector('#object-test #x').innerHTML == testObject.object.x &&
+          node.querySelector('#object-test #y').innerHTML == testObject.object.y);
         report('Array Object',
-          template.querySelector('#array-object-test span:first-child').innerHTML == testObject.arrayObject[0].x &&
-          template.querySelector('#array-object-test span:last-child').innerHTML == testObject.arrayObject[1].x);
+          node.querySelector('#array-object-test span:first-child').innerHTML == testObject.arrayObject[0].x &&
+          node.querySelector('#array-object-test span:last-child').innerHTML == testObject.arrayObject[1].x);
         report('Ref Array Object',
-          template.querySelectorAll('#ref-array-object-test span').item(0).innerHTML == testObject.arrayObject[0].x &&
-          template.querySelectorAll('#ref-array-object-test span').item(1).innerHTML == testObject.arrayObject[1].x);
+          node.querySelectorAll('#ref-array-object-test span').item(0).innerHTML == testObject.arrayObject[0].x &&
+          node.querySelectorAll('#ref-array-object-test span').item(1).innerHTML == testObject.arrayObject[1].x);
 
         report('Array',
-          template.querySelector('#simple-array-test li:first-child').innerHTML == testObject.array[0] &&
-          template.querySelector('#simple-array-test li:last-child').innerHTML == testObject.array[1]);
+          node.querySelector('#simple-array-test li:first-child').innerHTML == testObject.array[0] &&
+          node.querySelector('#simple-array-test li:last-child').innerHTML == testObject.array[1]);
 
         report('Array2D',
-          template.querySelectorAll('#nested-array-test > li:first-child li').item(0).innerHTML == testObject.array2d[0][0] &&
-          template.querySelectorAll('#nested-array-test > li:first-child li').item(1).innerHTML == testObject.array2d[0][1] && 
-          template.querySelectorAll('#nested-array-test > li:last-child li').item(0).innerHTML == testObject.array2d[1][0] &&
-          template.querySelectorAll('#nested-array-test > li:last-child li').item(1).innerHTML == testObject.array2d[1][1]);
+          node.querySelectorAll('#nested-array-test > li:first-child li').item(0).innerHTML == testObject.array2d[0][0] &&
+          node.querySelectorAll('#nested-array-test > li:first-child li').item(1).innerHTML == testObject.array2d[0][1] && 
+          node.querySelectorAll('#nested-array-test > li:last-child li').item(0).innerHTML == testObject.array2d[1][0] &&
+          node.querySelectorAll('#nested-array-test > li:last-child li').item(1).innerHTML == testObject.array2d[1][1]);
 
-        report('Input.Checkbox', template.querySelector('#input-checkbox-test').checked == testObject.input.checkbox);
-        report('Input.Number', template.querySelector('#input-number-test').value == testObject.input.number);
-        report('Input.Text', template.querySelector('#input-text-test').value == testObject.input.text);
-        report('Input.Range', template.querySelector('#input-range-test').value == testObject.input.range.defaultValue);
-        report('Input.Range.Value', template.querySelector('#input-range-value-test').value == testObject.input.rangeValue);
+        report('Input.Checkbox', node.querySelector('#input-checkbox-test').checked == testObject.input.checkbox);
+        report('Input.Number', node.querySelector('#input-number-test').value == testObject.input.number);
+        report('Input.Text', node.querySelector('#input-text-test').value == testObject.input.text);
+        report('Input.Range', node.querySelector('#input-range-test').value == testObject.input.range.defaultValue);
+        report('Input.Range.Value', node.querySelector('#input-range-value-test').value == testObject.input.rangeValue);
 
-        const simpleATest = template.querySelector('#simple-a-test');
+        const simpleATest = node.querySelector('#simple-a-test');
         report('Simple Link', simpleATest.innerHTML == simpleATest.href && simpleATest.href == testObject.aRaw);
-        const linkTest = template.querySelector('#a-test');
+        const linkTest = node.querySelector('#a-test');
         report('Link', linkTest.innerHTML == testObject.a.innerHTML && linkTest.href == testObject.a.href);
-        const staticLinkTest = template.querySelector('#simple-a-static-name-test');
+        const staticLinkTest = node.querySelector('#simple-a-static-name-test');
         report('Static Link', staticLinkTest.innerHTML != staticLinkTest.href && linkTest.href == testObject.aRaw);
-        report('Select', template.querySelector('#select-test').value == testObject.select);
+        report('Select', node.querySelector('#select-test').value == testObject.select);
         
-        const returned = cte.getObject(template);
+        const returned = cte.getObject(node);
 
         report('GetObject.Basic', testObject.basic == returned.basic);
         report('GetObject.Referenced', testObject.referenced.key == returned.referenced.key);
@@ -185,8 +192,8 @@
         report('GetObject.Input.Checkbox', testObject.input.checkbox === returned.input.checkbox);
         report('GetObject.Input.Number', testObject.input.number === returned.input.number);
         report('GetObject.Input.Text', testObject.input.text === returned.input.text);
-        report('GetObject.Input.Range', testObject.input.range.defaultValue == returned.input.range.value);
-        report('GetObject.Input.RangeAttr', testObject.input.rangeAttr.value == returned.input.rangeAttr.value);
+        report('GetObject.Input.Range', testObject.input.range.defaultValue == returned.input.range);
+        report('GetObject.Input.RangeAttr', testObject.input.rangeAttr.value == returned.input.rangeAttr);
         report('GetObject.Input.RangeValue', testObject.input.rangeValue == returned.input.rangeValue);
       } catch (e) {
         report('Thrown Exception', false);
@@ -195,7 +202,6 @@
 
     }
   
-    cte.$global.age_range = {min: 2, max: 10, step: 1};
     let object = {
       title: 'title',
       subtitle: 'subtitle',
