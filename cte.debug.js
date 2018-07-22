@@ -1,7 +1,7 @@
 'use strict';
 
 (() => {
-  const IT = '$it';
+  const ITEM = '$i';
   const DATA = 'data';
   const DATA_SELECTOR = '[data]';
   const CTE = 'cte';
@@ -10,7 +10,7 @@
   const CTE_REF_SELECTOR = '[cte-ref]';
   const SETTER = 'setter';
   const GETTER = 'getter';
-  const NO_GETTER_DEFINED = function(){};
+  const UNDEFINED = function(){};
   let visibilityClass = 'hidden';
 
   const setters = {};
@@ -24,14 +24,20 @@
     const isNew = !el._cteArrayElementSet;
     if (isNew) {
       el._cteArrayElementSet = [];
-      for (const child of el.children)
-        el._cteArrayElementSet.push(child.cloneNode(true));
+      for (const child of el.children) {
+        el._cteArrayElementSet.push(child);
+        for (const dataChild of child.querySelectorAll(DATA_SELECTOR))
+          dataChild._ctePassed = true;
+      }
     }
 
     el.innerHTML = '';
-    for (const object of array)
-      for (const child of el._cteArrayElementSet)
-        el.appendChild(_putObject(child.cloneNode(true), object));
+    for (const object of array) {
+      for (const child of el._cteArrayElementSet) {
+        const copy = child.cloneNode(true);
+        el.appendChild(_putObject(copy, undefined, object));
+      }
+    }
   };
 
   const getterArray = (el) => {
@@ -41,18 +47,22 @@
 
     if (!el._cteArrayElementSet)
       return console.error('Currently unsupported! Cannot get data from array node that was never set');
+    if (!el._cteArrayElementSet.length == 1)
+      return console.error('Currently unsupported! Cannot get data from array node that has a composite internal structure');
 
     for (const child of el.children) {
       let newObject = _getObject(child);
-      if (newObject === NO_GETTER_DEFINED)
-        return NO_GETTER_DEFINED;
+      if (newObject === UNDEFINED)
+        return UNDEFINED;
 
-      const key = child.getAttribute(DATA);
-      if (key && key != IT)
-        newObject = { [key]: newObject };
+      if (child.hasAttribute(DATA)) {
+        let key = getDataPath(child, DATA);
+        if (key)
+          newObject = { [key]: newObject };
+      }
 
-      if (typeof newObject == 'object' && IT in newObject)
-        newObject = newObject[IT];
+//      if (typeof newObject == 'object' && ITEM in newObject)
+        //newObject = newObject[ITEM];
 
       result.push(newObject);
     }
@@ -125,6 +135,14 @@
     return !el.classList.contains(visibilityClass);
   };
 
+  const setterInvisibility = (el, value) => {
+    el.classList.toggle(visibilityClass, !!value);
+  };
+
+  const getterInvisibility = (el) => {
+    return el.classList.contains(visibilityClass);
+  };
+
   settersDefault['A'] = (el, value) => {
     setterHref(el, value);
     if (!el.innerHTML)
@@ -145,6 +163,8 @@
 
   setters['visibility'] = setterVisibility;
   getters['visibility'] = getterVisibility;
+  setters['invisibility'] = setterInvisibility;
+  getters['invisibility'] = getterInvisibility;
   setters['raw'] = setterRaw;
   getters['raw'] = getterRaw;
 
@@ -197,10 +217,6 @@
 
   // General helpers
 
-  function intersection(array1, array2) {
-    return array1.filter(value => -1 !== array2.indexOf(value));
-  }
-
   function resolveSafe(object, path) {
     if (!path)
       return object;
@@ -231,7 +247,7 @@
     }
 
     root[paths[lastIndex]] = value;
-    return object;
+    return value;
   }
 
   function getNumberFromElement(el, value) {
@@ -264,7 +280,7 @@
     if (getter)
       return getter(el);
 
-    return NO_GETTER_DEFINED;
+    return UNDEFINED;
   }
 
   function setElementValue(el, value) {
@@ -285,41 +301,54 @@
     if (setter)
       return setter(el, value);
 
-    return el.innerHTML = value === undefined || value === null ? '' : value;
+    if (typeof value != 'object')
+      return el.innerHTML = value === undefined || value === null ? '' : value;
+    return value;
   }
 
   function getTemplate(id) {
     if (id in templates) {
       const template = templates[id].cloneNode(true);
-      template.removeAttribute(CTE);
-
       return template;
     } else {
       console.error(`Template ${id} not defined`);
     }
   }
 
-  function _putObject(node, object) {
+  function resolveDataPath(node, fullObject, parentObject) {
+    let dataPath = node.getAttribute(DATA);
+    if (!dataPath)
+      return UNDEFINED;
+
+    if (dataPath.startsWith(ITEM)) {
+      dataPath = dataPath.substr(ITEM.length + 1);
+      if (parentObject === undefined) {
+        console.warn(`${ITEM} found without parent object. Assuming fullObject`);
+        parentObject = fullObject;
+      }
+      return resolveSafe(parentObject, dataPath);
+    } else {
+      return resolveSafe(fullObject, dataPath);
+    }
+  }
+
+  function _putObject(node, fullObject, parentObject) {
     if (node._ctePassed)
       return node;
 
-    const elDataPath = node.getAttribute(DATA);
-    const objectValue = resolveSafe(object, elDataPath == IT ? '' : elDataPath);
-    if (typeof objectValue == "function")
-      objectValue = objectValue();
+    let object = resolveDataPath(node, fullObject, parentObject);
 
-    let setElement = true;
-    const resolveChildrenInstead = !node.hasAttribute(DATA) || !Array.isArray(objectValue) && typeof objectValue == "object";
-
-    if (resolveChildrenInstead) {
-      const children = node.querySelectorAll(DATA_SELECTOR);
-      setElement = children.length == 0;
-      for (const child of children)
-        _putObject(child, objectValue);
+    if (object === UNDEFINED) {
+      object = parentObject;
+    } else {
+      if (typeof object == "function")
+        object = object();
+      setElementValue(node, object);
     }
 
-    if (setElement)
-      setElementValue(node, objectValue);
+    for (const child of node.querySelectorAll(DATA_SELECTOR))
+      if (node.contains(child)) // Might have been removed by previous child processing
+        _putObject(child, fullObject, object);
 
     node._ctePassed = true;
     _ctePassed.push(node);
@@ -327,82 +356,47 @@
     return node;
   }
 
+  function _expandTemplate(container, refId) {
+    const node = getTemplate(refId);
+    container.removeAttribute(CTE_REF);
+    container.innerHTML = '';
+    container.appendChild(node);
+    const modified = [];
+    for (const child of node.querySelectorAll(DATA_SELECTOR)) {
+      for (const firstLevelChild of modified)
+        if (firstLevelChild.contains(child))
+          continue;
+
+      modified.push(child);
+      const dataPath = child.getAttribute(DATA);
+      if (!dataPath.startsWith(ITEM))
+        child.setAttribute(DATA, `${ITEM}.${dataPath}`);
+    }
+  }
+
   function expandTemplate(template) {
-    const PARENT_DATA = 'parent-data';
-    const PARENT_DATA_SELECTOR = '[parent-data]';
+    const refId = template.getAttribute(CTE_REF);
+    if (refId)
+      _expandTemplate(template, refId);
+
     let refs = template.querySelectorAll(CTE_REF_SELECTOR);
     while (refs.length) {
       for (const el of refs) {
         const refId = el.getAttribute(CTE_REF);
-        const parentDataPath = el.getAttribute(DATA);
-        const node = getTemplate(refId);
-
-        el.removeAttribute(CTE_REF);
-        el.removeAttribute(DATA);
-        el.innerHTML = '';
-
-        if (parentDataPath) {
-          const existingParentDataPath = node.getAttribute(PARENT_DATA);
-          node.setAttribute(PARENT_DATA, existingParentDataPath ? `${existingParentDataPath}.parentDataPath` : parentDataPath);
-        }
-
-        el.appendChild(node);
+        _expandTemplate(el, refId)
       }
 
       refs = template.querySelectorAll(CTE_REF_SELECTOR);
     }
-
-    for (const el of template.querySelectorAll(PARENT_DATA_SELECTOR)) {
-      const elDataPath = el.getAttribute(DATA);
-      let dataPath = elDataPath == IT ? '' : elDataPath;
-
-      const parentDataPath = el.getAttribute(PARENT_DATA);
-      el.removeAttribute(PARENT_DATA);
-
-      if (parentDataPath && dataPath)
-        dataPath = `${parentDataPath}.${dataPath}`;
-      else if (parentDataPath)
-        dataPath = parentDataPath;
-
-      el.setAttribute(DATA, dataPath);
-    }
   }
 
-  function compress(object) {
-    if (typeof object != "object")
-      return object;
-
-    const keys = Object.keys(object);
-    if (keys.length == 0)
-      return object;
-
-    let isArray = true;
-    for (const key of keys) {
-      if (isNaN(key)) {
-        isArray = false;
-        break;
-      }
-    }
-
-    if (isArray) {
-      const numericKeys = [];
-      for (const key of keys)
-        numericKeys.push(key * 1);
-
-      const newObject = [];
-      for (const key of numericKeys.sort()) {
-        newObject.push(compress(object[key]));
-      }
-
-      return newObject;
-    }
-
-    for (const key of keys)
-      object[key] = compress(object[key]);
-
-    return object;
+  function getDataPath(el) {
+    const dataAttr = el.getAttribute(DATA);
+    if (dataAttr.startsWith(ITEM))
+      return dataAttr.substr(ITEM.length + 1);
+    return dataAttr;
   }
-
+  
   function _getObject(node) {
     if (node._ctePassed)
       return;
@@ -418,12 +412,18 @@
         if (child._ctePassed)
           continue;
         const object = _getObject(child);
-        if (object !== NO_GETTER_DEFINED)
-          insertSafe(value, child.getAttribute(DATA), object);
+        if (object !== UNDEFINED){
+          const dataPath = getDataPath(child);
+          if (dataPath)
+            insertSafe(value, dataPath, object);
+          else
+            value = object;
+        }
+          
       }
 
-      if (!Object.keys(value).length)
-        value = NO_GETTER_DEFINED;
+      if (typeof object == 'object' && !Object.keys(value).length)
+        value = UNDEFINED;
     }
 
     node._ctePassed = true;
@@ -436,15 +436,19 @@
 
     for (const node of _ctePassed)
       delete node._ctePassed;
+    _ctePassed.length = 0;
 
-    return object;
+    return object == UNDEFINED ? undefined : object;
   }
 
   function putObject(template, object) {
     _putObject(template, object);
   }
-  
+
   function newNode(templateId, object) {
+    if (Array.isArray(object))
+      return console.error('Object as array');
+
     const template = getTemplate(templateId);
 
     expandTemplate(template);
@@ -452,23 +456,38 @@
 
     for (const node of _ctePassed)
       delete node._ctePassed;
+    _ctePassed.length = 0;
 
     return template;
   }
 
   function setGetter(name, object) {
+    if (typeof name == 'object') {
+      object = name;
+      for (const key of Object.keys(object))
+        setGetter(key, object[key]);
+      return;
+    }
+
     if (typeof object == 'function')
       return getters[name] = object;
     for (const key of Object.keys(object))
-      setGetter(`${name}.${key}`, object[key])
+      setGetter(`${name}.${key}`, object[key]);
     return object;
   }
 
   function setSetter(name, object) {
+    if (typeof name == 'object') {
+      object = name;
+      for (const key of Object.keys(object))
+        setSetter(key, object[key]);
+      return;
+    }
+
     if (typeof object == 'function')
       return setters[name] = object;
     for (const key of Object.keys(object))
-      setSetter(`${name}.${key}`, object[key])
+      setSetter(`${name}.${key}`, object[key]);
     return object;
   }
 
@@ -482,7 +501,7 @@
         setTransformer(`${name}.${key}`, object[key])
     return object;
   }
-  
+
   function getDefaultSetter(el) {
     return settersDefault[el.tagName];
   }
@@ -495,6 +514,9 @@
     newNode,
     getObject,
     putObject,
+    setDefaultSetter(tagName, func) {
+      settersDefault[tagName] = func;
+    },
     getDefaultSetter,
     getDefaultGetter,
     setTransformer,

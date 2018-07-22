@@ -12,57 +12,8 @@
   </style>
 </head>
 <body>
-  <li cte="friend-item">
-    <span data="name"></span>&nbsp;<span data="age"></span>
-  </li>
-  <!-- INVALID li cte="nicknames-item"><span data="$it"></span></li-->
-  <div cte="person-template">
-    <select data="title">
-      <option value="mr">Mr</option>
-      <option value="mrs">Mrs</option>
-      <option value="miss">Miss</option>
-    </select>
-    <span data="name"></span>
-    <br/>
-    <label>Age:</label><span data="age" data-type="number"></span>
-    <br/>
-    <input type="number" data="money" placeholder="money"></input>
-    <br/>
-    <input type="range" data="age" placeholder="age"></input>
-    <br/>
-    <label>Has license:</label><input type="checkbox" data="has_license"></input>
-    <br/>
-    <ul data="friends" cte-ref="friend-item"></ul>
-    <ul data="nicknames">
-      <li><b><span data="$it"></span></b></li>
-    </ul>
-    <ul data="array2d">
-      <li>
-        <ul data="$it">
-          <li><b><span data="$it"></span></b></li>
-        </ul>
-      </li>
-    </ul>
-  </div>
 
-  <div cte="basic">
-    <h1 data="title"></h1>
-    <h2 data="subtitle"></h2>
-    <input type="text" data="content.field1" placeholder="field1"></input>
-    <input type="text" data="content.field2" placeholder="field2"></input>
-    <div cte-ref="person-template" data="person"></div>
-    <button id="getObj">Get</button>
-    <button id="setObj">Set</button>
-  </div>
-
-  <button id="add">Add Single template</button>
-  <button id="addMulti">Add Multiple templates</button>
-  <button id="show" class="hidden">Show template</button>
-  <button id="hide" class="hidden">Hide template</button>
-
-  <div class="container"></div>
-
-  
+  <!-- EXAMPLE AND TESTS START-->
   <div id="test-container">
     <div cte="referenced-test">
       <div id="key" data="key" getter="raw"></div>
@@ -75,15 +26,20 @@
       <div id="basic-test" data="basic" getter="raw"></div>
       <div id="referenced-test" cte-ref="referenced-test" data="referenced"></div>
       <div id="object-test"><span id="x" data="object.x" getter="raw"></span><span id="y" data="object.y" getter="raw"></span></div>
+      <div id="object-test2" data="object"><span id="x" data="$i.x" getter="raw"></span><span id="y" data="$i.y" getter="raw"></span></div>
 
-      <div id="array-object-test" data="arrayObject"><span data="x"></span></div>
+      <div id="array-object-test" data="arrayObject"><span data="$i.x" getter="raw"></span></div>
       <div cte-ref="ref-array-object-test" id="ref-array-object-test" data="arrayObject"></div>
 
-      <ul id="simple-array-test" data="array"><li data="$it" title="From Array" getter="raw"></li></ul>
-      <ul id="nested-array-test" data="array2d">
+      <ul id="simple-array-test" data="array"><li data="$i" title="From Array" getter="raw"></li></ul>
+      <ul id="nested-array-test" data="arrayXD">
         <li>
-          <ul data="$it">
-            <li data="$it" title="From 2D array" getter="raw"></li>
+          <ul data="$i">
+            <li>
+              <ul data="$i">
+                <li data="$i" title="From 2D array" getter="raw"></li>
+              </ul>
+            </li>
           </ul>
         </li>
       </ul>
@@ -110,11 +66,52 @@
       </div>
     </div>
   </div>
-  <script>
+  
+  
+    <script>
     function runTests() {
       function report(text, passed) {
         if (!passed)
           alert(`Failed Test - ${text}`);
+        return !passed;
+      }
+
+      function arrayEquality(l, r) {
+        for (const i in l) {
+          const a = l[i];
+          const b = r[i];
+          if (Array.isArray(a)) {
+            return arrayEquality(a, b);
+          } else {
+            if (a != b)
+              return false;
+          }
+        }
+        return true;
+      }
+
+      function isValidDomArrayXD(ul, arrayXD) {
+        for (const i in arrayXD) {
+          const a = arrayXD[i];
+          for (const j in a) {
+            const b = a[j];
+            for (const k in b) {
+              const c = b[k];
+              try
+              {
+                if (c != ul.children.item(i).firstElementChild.children.item(j).firstElementChild.children.item(k).innerHTML)
+                  return false;
+              }
+              catch(e)
+              {
+                console.error(e);
+                return false;;
+              }
+            }
+          }
+        }
+
+        return true;
       }
 
       const testObject = {
@@ -123,7 +120,15 @@
         object: {x:1, y:2},
         arrayObject: [{x:3}, {x:4}],
         array: [10, 20],
-        array2d: [[100, 200], [300, 400]],
+        arrayXD: [
+                   [
+                     [100, 200],
+                     [300, 400]
+                   ], [
+                     [500, 600],
+                     [700, 900]
+                   ]
+                 ],
         input: {
           checkbox: true,
           number: 5,
@@ -150,6 +155,9 @@
         report('Simple Object',
           node.querySelector('#object-test #x').innerHTML == testObject.object.x &&
           node.querySelector('#object-test #y').innerHTML == testObject.object.y);
+        report('Simple Object2',
+          node.querySelector('#object-test2 #x').innerHTML == testObject.object.x &&
+          node.querySelector('#object-test2 #y').innerHTML == testObject.object.y);
         report('Array Object',
           node.querySelector('#array-object-test span:first-child').innerHTML == testObject.arrayObject[0].x &&
           node.querySelector('#array-object-test span:last-child').innerHTML == testObject.arrayObject[1].x);
@@ -161,12 +169,7 @@
           node.querySelector('#simple-array-test li:first-child').innerHTML == testObject.array[0] &&
           node.querySelector('#simple-array-test li:last-child').innerHTML == testObject.array[1]);
 
-        report('Array2D',
-          node.querySelectorAll('#nested-array-test > li:first-child li').item(0).innerHTML == testObject.array2d[0][0] &&
-          node.querySelectorAll('#nested-array-test > li:first-child li').item(1).innerHTML == testObject.array2d[0][1] && 
-          node.querySelectorAll('#nested-array-test > li:last-child li').item(0).innerHTML == testObject.array2d[1][0] &&
-          node.querySelectorAll('#nested-array-test > li:last-child li').item(1).innerHTML == testObject.array2d[1][1]);
-
+        report('ArrayXD', isValidDomArrayXD(node.querySelector('#nested-array-test'), testObject.arrayXD));
         report('Input.Checkbox', node.querySelector('#input-checkbox-test').checked == testObject.input.checkbox);
         report('Input.Number', node.querySelector('#input-number-test').value == testObject.input.number);
         report('Input.Text', node.querySelector('#input-text-test').value == testObject.input.text);
@@ -180,6 +183,35 @@
         const staticLinkTest = node.querySelector('#simple-a-static-name-test');
         report('Static Link', staticLinkTest.innerHTML != staticLinkTest.href && linkTest.href == testObject.aRaw);
         report('Select', node.querySelector('#select-test').value == testObject.select);
+
+        let test = cte.getObject(node.querySelector('#basic-test'));
+        report('GetObject.Basic', testObject.basic == test);
+        test = cte.getObject(node.querySelector('#referenced-test'));
+        report('GetObject.Referenced', testObject.referenced.key == test.key);
+        test = cte.getObject(node.querySelector('#object-test'));
+        report('GetObject.SimpleObject', testObject.object.x == test.object.x && testObject.object.y == test.object.y);
+        test = cte.getObject(node.querySelector('#object-test2'));
+        report('GetObject.SimpleObject2', testObject.object.x == test.x && testObject.object.y == test.y);
+        test = cte.getObject(node.querySelector('#array-object-test'));
+        report('GetObject.ArrayObject', testObject.arrayObject[0].x == test[0].x && testObject.arrayObject[1].x == test[1].x);
+        test = cte.getObject(node.querySelector('#ref-array-object-test'));
+        report('GetObject.RefArrayObject', testObject.arrayObject[0].x == test[0].x && testObject.arrayObject[1].x == test[1].x);
+        test = cte.getObject(node.querySelector('#simple-array-test'));
+        report('GetObject.Array', arrayEquality(testObject.array, test));
+        test = cte.getObject(node.querySelector('#nested-array-test'));
+        report('GetObject.ArrayXD', arrayEquality(testObject.arrayXD, test));
+        test = cte.getObject(node.querySelector('#input-checkbox-test'));
+        report('GetObject.Input.Checkbox', testObject.input.checkbox === test);
+        test = cte.getObject(node.querySelector('#input-number-test'));
+        report('GetObject.Input.Number', testObject.input.number === test);
+        test = cte.getObject(node.querySelector('#input-text-test'));
+        report('GetObject.Input.Text', testObject.input.text === test);
+        test = cte.getObject(node.querySelector('#input-range-test'));
+        report('GetObject.Input.Range', testObject.input.range.defaultValue == test);
+        test = cte.getObject(node.querySelector('#input-range-attr-test'));
+        report('GetObject.Input.RangeAttr', testObject.input.rangeAttr.value == test);
+        test = cte.getObject(node.querySelector('#input-range-value-test'));
+        report('GetObject.Input.RangeValue', testObject.input.rangeValue == test);
         
         const returned = cte.getObject(node);
 
@@ -187,8 +219,8 @@
         report('GetObject.Referenced', testObject.referenced.key == returned.referenced.key);
         report('GetObject.SimpleObject', testObject.object.x == returned.object.x && testObject.object.y == returned.object.y);
         report('GetObject.ArrayObject', testObject.arrayObject[0].x == returned.arrayObject[0].x && testObject.arrayObject[1].x == returned.arrayObject[1].x);
-        report('GetObject.Array', testObject.array[0] == returned.array[0] && testObject.array[1] == returned.array[1]);
-        report('GetObject.Array2D', testObject.array2d[0][0] == returned.array2d[0][0] && testObject.array2d[1][1] == returned.array2d[1][1]);
+        report('GetObject.Array', arrayEquality(testObject.array, returned.array));
+        report('GetObject.ArrayXD', arrayEquality(testObject.arrayXD, returned.arrayXD));
         report('GetObject.Input.Checkbox', testObject.input.checkbox === returned.input.checkbox);
         report('GetObject.Input.Number', testObject.input.number === returned.input.number);
         report('GetObject.Input.Text', testObject.input.text === returned.input.text);
@@ -201,7 +233,83 @@
       }
 
     }
-  
+
+    function ready(fn) {
+      if (document.attachEvent ? document.readyState === "complete" : document.readyState !== "loading"){
+        fn();
+      } else {
+        document.addEventListener('DOMContentLoaded', fn);
+      }    
+    }
+
+    ready(runTests);
+  </script>
+  <!-- EXAMPLE AND TESTS END -->
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  <li cte="friend-item">
+    <span data="name"></span>&nbsp;<span data="age"></span>
+  </li>
+  <!-- INVALID li cte="nicknames-item"><span data="$i"></span></li-->
+  <div cte="person-template">
+    <select data="title">
+      <option value="mr">Mr</option>
+      <option value="mrs">Mrs</option>
+      <option value="miss">Miss</option>
+    </select>
+    <span data="name"></span>
+    <br/>
+    <label>Age:</label><span data="age" data-type="number"></span>
+    <br/>
+    <input type="number" data="money" placeholder="money"></input>
+    <br/>
+    <input type="range" data="age" placeholder="age"></input>
+    <br/>
+    <label>Has license:</label><input type="checkbox" data="has_license"></input>
+    <br/>
+    <ul data="friends" cte-ref="friend-item"></ul>
+    <ul data="nicknames">
+      <li><b><span data="$i"></span></b></li>
+    </ul>
+    <ul data="arrayXD">
+      <li>
+        <ul data="$i">
+          <li><b><span data="$i"></span></b></li>
+        </ul>
+      </li>
+    </ul>
+  </div>
+
+  <div cte="basic">
+    <h1 data="title"></h1>
+    <h2 data="subtitle"></h2>
+    <input type="text" data="content.field1" placeholder="field1"></input>
+    <input type="text" data="content.field2" placeholder="field2"></input>
+    <div cte-ref="person-template" data="person"></div>
+    <button id="getObj">Get</button>
+    <button id="setObj">Set</button>
+  </div>
+
+  <button id="add">Add Single template</button>
+  <button id="addMulti">Add Multiple templates</button>
+  <button id="show" class="hidden">Show template</button>
+  <button id="hide" class="hidden">Hide template</button>
+
+  <div class="container"></div>
+  <script>
     let object = {
       title: 'title',
       subtitle: 'subtitle',
@@ -213,7 +321,7 @@
         has_license: true,
         nicknames: ['Power Ranger', 'Captain Planet'],
         friends: [{name: 'John Doe', age:'Unknown'}, {name: 'Jean Doe', age:'25'}],
-        array2d: [[1,2,3],[1,2,3],[1,2,3]]
+        arrayXD: [[1,2,3],[1,2,3],[1,2,3]]
       }
     };
 
@@ -260,16 +368,6 @@
           for (const button of template.querySelectorAll('button'))
             button.parentNode.removeChild(button); 
     });
-
-    function ready(fn) {
-      if (document.attachEvent ? document.readyState === "complete" : document.readyState !== "loading"){
-        fn();
-      } else {
-        document.addEventListener('DOMContentLoaded', fn);
-      }    
-    }
-
-    ready(runTests);
   </script>
 </body>
 </html>
