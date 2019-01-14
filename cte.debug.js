@@ -2,14 +2,12 @@
 
 (() => {
   const ITEM = '$i';
-  const DATA = 'data';
-  const DATA_SELECTOR = '[data]';
-  const CTE = 'cte';
-  const CTE_SELECTOR = '[cte]';
-  const CTE_REF = 'cte-ref';
-  const CTE_REF_SELECTOR = '[cte-ref]';
-  const SETTER = 'setter';
-  const GETTER = 'getter';
+  const DATA = 'path';
+  const DATA_SELECTOR = '[path]';
+  const CTE_REF = 'template';
+  const CTE_REF_SELECTOR = '[template]';
+  const SETTER = 'set';
+  const GETTER = 'get';
   const UNDEFINED = function(){};
   let visibilityClass = 'hidden';
 
@@ -356,35 +354,34 @@
     return node;
   }
 
-  function _expandTemplate(container, refId) {
+  function _expandRefTemplate(container) {
+    const refId = container.getAttribute(CTE_REF);
+    if (container.innerHTML)
+      console.warn(`Destroyed content cause of refId [${refId}]`);
     const node = getTemplate(refId);
     container.removeAttribute(CTE_REF);
     container.innerHTML = '';
     container.appendChild(node);
-    const modified = [];
-    for (const child of node.querySelectorAll(DATA_SELECTOR)) {
-      for (const firstLevelChild of modified)
-        if (firstLevelChild.contains(child))
-          continue;
-
-      modified.push(child);
+    for (let child of container.querySelectorAll(DATA_SELECTOR)) {
       const dataPath = child.getAttribute(DATA);
       if (!dataPath.startsWith(ITEM))
         child.setAttribute(DATA, `${ITEM}.${dataPath}`);
     }
   }
-
+  
   function expandTemplate(template) {
     const refId = template.getAttribute(CTE_REF);
     if (refId)
-      _expandTemplate(template, refId);
+      return console.error(`No point in defining a template with a refId ${refId}`);
 
     let refs = template.querySelectorAll(CTE_REF_SELECTOR);
     while (refs.length) {
-      for (const el of refs) {
-        const refId = el.getAttribute(CTE_REF);
-        _expandTemplate(el, refId)
-      }
+      const lastOne = refs.length == 1;
+      const lastChild = refs[refs.length - 1];
+      _expandRefTemplate(lastChild);
+
+      if (lastOne)
+        break;
 
       refs = template.querySelectorAll(CTE_REF_SELECTOR);
     }
@@ -432,6 +429,10 @@
   }
 
   function getObject(template) {
+    for (const node of _ctePassed)
+      delete node._ctePassed;
+    _ctePassed.length = 0;
+
     const object = _getObject(template);
 
     for (const node of _ctePassed)
@@ -451,7 +452,6 @@
 
     const template = getTemplate(templateId);
 
-    expandTemplate(template);
     _putObject(template, object);
 
     for (const node of _ctePassed)
@@ -538,11 +538,15 @@
   const templates = {};
 
   ready(() => {
-    for (const template of document.querySelectorAll(CTE_SELECTOR)) {
-      const id = template.getAttribute(CTE);
-      template.removeAttribute(CTE);
-      template.parentNode.removeChild(template);
-      templates[id] = template;
+    for (const template of document.querySelectorAll('template')) {
+      const id = template.id;
+      template.removeAttribute('id');
+      template.remove();
+      templates[id] = template.content.firstElementChild;
+    }
+
+    for (let div of Object.values(templates)) {
+      expandTemplate(div);
     }
   });
 

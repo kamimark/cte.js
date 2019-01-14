@@ -6,65 +6,64 @@
     .hidden {
       display: none;
     }
-    [cte] {
-      display: none;
-    }
   </style>
 </head>
 <body>
 
   <!-- EXAMPLE AND TESTS START-->
   <div id="test-container">
-    <div cte="referenced-test">
-      <div id="key" data="key" getter="raw"></div>
-    </div>
-    <div cte="ref-array-object-test">
-      <span id="x" data="x" getter="raw"></span>
-    </div>
+    <template id="referenced-test">
+      <div id="key" path="key" get="raw"></div>
+    </template>
+    <template id="ref-array-object-test">
+      <span id="x" path="x" get="raw"></span>
+    </template>
 
-    <div cte="test">
-      <div id="basic-test" data="basic" getter="raw"></div>
-      <div id="referenced-test" cte-ref="referenced-test" data="referenced"></div>
-      <div id="object-test"><span id="x" data="object.x" getter="raw"></span><span id="y" data="object.y" getter="raw"></span></div>
-      <div id="object-test2" data="object"><span id="x" data="$i.x" getter="raw"></span><span id="y" data="$i.y" getter="raw"></span></div>
+    <template id="test">
+      <div>
+        <div id="basic-test" path="basic" get="raw"></div>
+        <div id="referenced-test" template="referenced-test" path="referenced"></div>
+        <div id="object-test"><span id="x" path="object.x" get="raw"></span><span id="y" path="object.y" get="raw"></span></div>
+        <div id="object-test2" path="object"><span id="x" path="$i.x" get="raw"></span><span id="y" path="$i.y" get="raw"></span></div>
 
-      <div id="array-object-test" data="arrayObject"><span data="$i.x" getter="raw"></span></div>
-      <div cte-ref="ref-array-object-test" id="ref-array-object-test" data="arrayObject"></div>
+        <div id="array-object-test" path="arrayObject"><span path="$i.x" get="raw"></span></div>
+        <div template="ref-array-object-test" id="ref-array-object-test" path="arrayObject"></div>
 
-      <ul id="simple-array-test" data="array"><li data="$i" title="From Array" getter="raw"></li></ul>
-      <ul id="nested-array-test" data="arrayXD">
-        <li>
-          <ul data="$i">
-            <li>
-              <ul data="$i">
-                <li data="$i" title="From 2D array" getter="raw"></li>
-              </ul>
-            </li>
-          </ul>
-        </li>
-      </ul>
+        <ul id="simple-array-test" path="array"><li path="$i" title="From Array" get="raw"></li></ul>
+        <ul id="nested-array-test" path="arrayXD">
+          <li>
+            <ul path="$i">
+              <li>
+                <ul path="$i">
+                  <li path="$i" title="From 2D array" get="raw"></li>
+                </ul>
+              </li>
+            </ul>
+          </li>
+        </ul>
 
-      <input id="input-checkbox-test" type="checkbox" data="input.checkbox"></input><br/>
-      <input id="input-number-test" type="number" data="input.number" title="Number only"></input><br/>
-      <input id="input-text-test" type="text" data="input.text" title="Text"></input><br/>
-      <input id="input-range-test" type="range" data="input.range" setter="html-object" title="Range as object"></input><br/>
-      <input id="input-range-attr-test" type="range" data="input.rangeAttr" setter="attr-object" title="Range using attrs"></input>
-      <input id="input-range-value-test" type="range" data="input.rangeValue" title="Range using value" min="0" max="10" defaultValue="3"></input>
+        <input id="input-checkbox-test" type="checkbox" path="input.checkbox"></input><br/>
+        <input id="input-number-test" type="number" path="input.number" title="Number only"></input><br/>
+        <input id="input-text-test" type="text" path="input.text" title="Text"></input><br/>
+        <input id="input-range-test" type="range" path="input.range" set="html-object" title="Range as object"></input><br/>
+        <input id="input-range-attr-test" type="range" path="input.rangeAttr" set="attr-object" title="Range using attrs"></input>
+        <input id="input-range-value-test" type="range" path="input.rangeValue" title="Range using value" min="0" max="10" defaultValue="3"></input>
 
-      <a id="simple-a-test" data="aRaw" title="Passed as string"></a><br/>
-      <a id="simple-a-static-name-test" data="aRaw" title="With static name">Here</a><br/>
-      <a id="a-test" data="a" setter="html-object" title="Passed as object"></a><br/>
+        <a id="simple-a-test" path="aRaw" title="Passed as string"></a><br/>
+        <a id="simple-a-static-name-test" path="aRaw" title="With static name">Here</a><br/>
+        <a id="a-test" path="a" set="html-object" title="Passed as object"></a><br/>
 
-      <select id="select-test" data="select">
-        <option value="s1">Not Selected</option>
-        <option value="s2">Selected</option>
-        <option value="s3">Not Selected</option>
-      </select>
+        <select id="select-test" path="select">
+          <option value="s1">Not Selected</option>
+          <option value="s2">Selected</option>
+          <option value="s3">Not Selected</option>
+        </select>
 
-      <div data="hideme" setter="visibility" style="color:red;">
-        <label >Failed test cases</label><span><b data="hideme"></b></span>
+        <div path="hideme" set="visibility" style="color:red;">
+          <label >Failed test cases</label><span><b path="hideme"></b></span>
+        </div>
       </div>
-    </div>
+    </template>
   </div>
   
   
@@ -260,48 +259,54 @@
 
 
 
-  <li cte="friend-item">
-    <span data="name"></span>&nbsp;<span data="age"></span>
-  </li>
-  <!-- INVALID li cte="nicknames-item"><span data="$i"></span></li-->
-  <div cte="person-template">
-    <select data="title">
-      <option value="mr">Mr</option>
-      <option value="mrs">Mrs</option>
-      <option value="miss">Miss</option>
-    </select>
-    <span data="name"></span>
-    <br/>
-    <label>Age:</label><span data="age" data-type="number"></span>
-    <br/>
-    <input type="number" data="money" placeholder="money"></input>
-    <br/>
-    <input type="range" data="age" placeholder="age"></input>
-    <br/>
-    <label>Has license:</label><input type="checkbox" data="has_license"></input>
-    <br/>
-    <ul data="friends" cte-ref="friend-item"></ul>
-    <ul data="nicknames">
-      <li><b><span data="$i"></span></b></li>
-    </ul>
-    <ul data="arrayXD">
-      <li>
-        <ul data="$i">
-          <li><b><span data="$i"></span></b></li>
-        </ul>
-      </li>
-    </ul>
-  </div>
+  <template id="friend-item">
+    <li>
+      <span path="name"></span>&nbsp;<span path="age"></span>
+    </li>
+  </template>
 
-  <div cte="basic">
-    <h1 data="title"></h1>
-    <h2 data="subtitle"></h2>
-    <input type="text" data="content.field1" placeholder="field1"></input>
-    <input type="text" data="content.field2" placeholder="field2"></input>
-    <div cte-ref="person-template" data="person"></div>
-    <button id="getObj">Get</button>
-    <button id="setObj">Set</button>
-  </div>
+  <template id="person-template">
+    <div>
+      <select path="title">
+        <option value="mr">Mr</option>
+        <option value="mrs">Mrs</option>
+        <option value="miss">Miss</option>
+      </select>
+      <span path="name"></span>
+      <br/>
+      <label>Age:</label><span path="age" data-type="number"></span>
+      <br/>
+      <input type="number" path="money" placeholder="money"></input>
+      <br/>
+      <input type="range" path="age" placeholder="age"></input>
+      <br/>
+      <label>Has license:</label><input type="checkbox" path="has_license"></input>
+      <br/>
+      <ul path="friends" template="friend-item"></ul>
+      <ul path="nicknames">
+        <li><b><span path="$i"></span></b></li>
+      </ul>
+      <ul path="arrayXD">
+        <li>
+          <ul path="$i">
+            <li><b><span path="$i"></span></b></li>
+          </ul>
+        </li>
+      </ul>
+    </div>
+  </template>
+
+  <template id="basic">
+    <div>
+      <h1 path="title"></h1>
+      <h2 path="subtitle"></h2>
+      <input type="text" path="content.field1" placeholder="field1"></input>
+      <input type="text" path="content.field2" placeholder="field2"></input>
+      <div template="person-template" path="person"></div>
+      <button id="getObj">Get</button>
+      <button id="setObj">Set</button>
+    </div>
+  </template>
 
   <button id="add">Add Single template</button>
   <button id="addMulti">Add Multiple templates</button>
@@ -341,10 +346,18 @@
 
     const multiObjects = [object, object2];
 
+    function newDom(templateId, selector, object) {
+      const container = document.querySelector(selector);
+      const template = cte.newNode(templateId);
+      cte.putObject(template, object);
+      container.appendChild(template);
+      return template;
+    }
+
     document
       .querySelector('#add')
       .addEventListener('click', (e) => {
-        const template = cte.newDom('basic', '.container', object);
+        const template = newDom('basic', '.container', object);
         template
           .querySelector('#getObj')
           .addEventListener('click', (e) => {
@@ -363,10 +376,11 @@
     document
       .querySelector('#addMulti')
       .addEventListener('click', (e) => {
-        const templates = cte.newDom('basic', '.container', multiObjects);
-        for (const template of templates)
+        for (const obj of multiObjects) {
+          const template = newDom('basic', '.container', obj);
           for (const button of template.querySelectorAll('button'))
             button.parentNode.removeChild(button); 
+        }
     });
   </script>
 </body>
